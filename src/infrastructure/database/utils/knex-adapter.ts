@@ -4,6 +4,7 @@ import { LinkFilterDTO, OrdinalFilterDTO, StringFilterDTO } from "~common/dto";
 
 import { PublicOrdinalOperator, PublicStringOperator } from "../enums";
 
+/** @public */
 export class KnexAdapter {
     public static pagination(query: Knex.QueryBuilder, pagination: Pagination): Knex.QueryBuilder {
         if (pagination) {

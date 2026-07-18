@@ -4,6 +4,7 @@ import { Expose } from "class-transformer";
 import { Validator } from "~common/validator";
 
 @ApiSchema({ name: "Pagination" })
+/** @public */
 export class PaginationDTO {
     @Expose()
     @Validator.IsPositive()

@@ -7,6 +7,7 @@ export enum ResponseViewType {
     /* eslint-enable prettier/prettier */
 }
 
+/** @public */
 export enum QueryMode {
     /* eslint-disable prettier/prettier */
     DEFAULT = "DEFAULT",

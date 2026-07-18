@@ -28,6 +28,7 @@ class ListMetaDTO {
 }
 
 @ApiSchema({ name: "BaseList" })
+/** @public */
 export class BaseListDTO<T> {
     @Expose()
     @Validator.IsArray()

@@ -4,6 +4,7 @@ import { Expose } from "class-transformer";
 import { Validator } from "~common/validator";
 
 @ApiSchema({ name: "SuccessMessage" })
+/** @public */
 export class SuccessMessageDTO {
     @Expose()
     @Validator.IsString()

@@ -12,6 +12,11 @@ It's a skeleton that's ready to work out of the box — it already:
 
 Grow your own domain on top of `context/domain`, `context/application`, `context/infrastructure`, and `context/interface`.
 
+> A few generic cross-cutting exports (decorators, base DTOs, `KnexAdapter`, `QueryMode`) are marked with a
+> `/** @public */` JSDoc comment. This only tells `knip` not to flag them as unused while no domain code
+> references them yet — it has no runtime effect. Search for `@public` (`grep -rn "@public" src`) and drop the
+> tag as you start actually using each export; once real code imports it, the tag is redundant.
+
 ----
 
 <details>

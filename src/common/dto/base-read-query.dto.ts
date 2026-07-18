@@ -5,6 +5,7 @@ import { ResponseViewType } from "~context/enums";
 import { Validator } from "~common/validator";
 
 @ApiSchema({ name: "BaseReadQuery" })
+/** @public */
 export class BaseReadQueryDTO {
     @Expose()
     @Validator.IsOptional()
