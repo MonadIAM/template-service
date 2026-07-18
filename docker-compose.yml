@@ -1,0 +1,254 @@
+x-base: &base
+  restart: on-failure
+
+name: ${SERVICE_NAME}
+
+services:
+  postgresql-primary:
+    <<: *base
+    image: ${POSTGRES_IMAGE:?}
+    container_name: ${SERVICE_NAME}-postgres-primary
+    env_file:
+      - .env
+    ports:
+      - "${POSTGRES_PRIMARY_PUBLISHED_PORT}:${POSTGRES_PORT}"
+    depends_on:
+      vault-secrets-init:
+        condition: service_completed_successfully
+    volumes:
+      - postgres_primary_data:/var/lib/postgresql/data
+      - postgresql_secrets:/vault/secrets:ro
+      - ./docker/postgres/setup-replication.sh:/docker-entrypoint-initdb.d/99-setup-replication.sh:ro
+      - ./docker/postgres/entrypoint.sh:/usr/local/bin/vault-entrypoint.sh:ro
+    entrypoint: ["sh", "/usr/local/bin/vault-entrypoint.sh"]
+    command: >
+      postgres
+      -c wal_level=logical
+      -c max_wal_senders=10
+      -c max_replication_slots=10
+      -c hot_standby=on
+    networks:
+      internal:
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h 127.0.0.1 -p ${POSTGRES_PORT}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  postgresql-replica:
+    <<: *base
+    image: ${POSTGRES_IMAGE:?}
+    container_name: ${SERVICE_NAME}-postgres-replica
+    env_file:
+      - .env
+    ports:
+      - "${POSTGRES_REPLICA_PUBLISHED_PORT}:${POSTGRES_PORT}"
+    depends_on:
+      postgresql-primary:
+        condition: service_healthy
+      vault-secrets-init:
+        condition: service_completed_successfully
+    volumes:
+      - postgres_replica_data:/var/lib/postgresql/data
+      - postgresql_secrets:/vault/secrets:ro
+      - ./docker/postgres/replica-entrypoint.sh:/usr/local/bin/replica-entrypoint.sh:ro
+    command: ["bash", "/usr/local/bin/replica-entrypoint.sh"]
+    networks:
+      internal:
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h 127.0.0.1 -p ${POSTGRES_PORT} && PGPASSWORD=$$(cat /vault/secrets/postgresql_password) psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h 127.0.0.1 -p ${POSTGRES_PORT} -tAc \"SELECT pg_is_in_recovery()\" | grep -q t",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  kafka-connect:
+    <<: *base
+    image: ${KAFKA_CONNECT_IMAGE:?}
+    container_name: ${SERVICE_NAME}-kafka-connect
+    ports:
+      - "${KAFKA_CONNECT_PORT}:8083"
+    env_file:
+      - .env
+    environment:
+      BOOTSTRAP_SERVERS: ${KAFKA_BROKER}
+      GROUP_ID: ${SERVICE_NAME}-connect
+      CONFIG_STORAGE_TOPIC: ${SERVICE_NAME}-connect-configs
+      OFFSET_STORAGE_TOPIC: ${SERVICE_NAME}-connect-offsets
+      STATUS_STORAGE_TOPIC: ${SERVICE_NAME}-connect-status
+    depends_on:
+      postgresql-primary:
+        condition: service_healthy
+    networks:
+      kafka_net:
+      internal:
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8083/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  debezium-init:
+    image: ${DEBEZIUM_INIT_IMAGE:?}
+    container_name: ${SERVICE_NAME}-debezium-init
+    env_file:
+      - .env
+    volumes:
+      - ./docker/debezium/connector.outbox.json.tpl:/connector.outbox.json.tpl:ro
+      - ./docker/debezium/init.sh:/init.sh:ro
+      - debezium_secrets:/vault/secrets:ro
+    depends_on:
+      kafka-connect:
+        condition: service_healthy
+      vault-secrets-init:
+        condition: service_completed_successfully
+    entrypoint: ["sh", "/init.sh"]
+    networks:
+      internal:
+
+  vault-init:
+    image: ${VAULT_IMAGE:?}
+    container_name: ${SERVICE_NAME}-vault-init
+    env_file:
+      - .env
+      - .vault.env
+    environment:
+      VAULT_ADDR: "http://vault:${VAULT_PORT}"
+      VAULT_TOKEN: ${VAULT_ROOT_TOKEN}
+    volumes:
+      - ./docker/vault/secrets-policy.hcl:/secrets-policy.hcl:ro
+      - ./docker/vault/init.sh:/init.sh:ro
+      - vault_secrets_token:/vault/token
+    entrypoint: ["sh", "/init.sh"]
+    networks:
+      vault_net:
+      internal:
+
+  vault-secrets-init:
+    image: ${VAULT_IMAGE:?}
+    container_name: ${SERVICE_NAME}-vault-secrets-init
+    env_file:
+      - .env
+    environment:
+      VAULT_ADDR: "http://vault:${VAULT_PORT}"
+    volumes:
+      - application_secrets:/secrets/application
+      - postgresql_secrets:/secrets/postgresql
+      - redis_secrets:/secrets/redis
+      - debezium_secrets:/secrets/debezium
+      - vault_secrets_token:/vault/token
+      - ./docker/vault/render-secrets.sh:/render-secrets.sh:ro
+    depends_on:
+      vault-init:
+        condition: service_completed_successfully
+    entrypoint: ["sh", "/render-secrets.sh"]
+    networks:
+      vault_net:
+      internal:
+
+  redis:
+    <<: *base
+    image: ${REDIS_IMAGE:?}
+    container_name: ${SERVICE_NAME}-redis
+    ports:
+      - "${REDIS_PUBLISHED_PORT}:${REDIS_PORT}"
+    depends_on:
+      vault-secrets-init:
+        condition: service_completed_successfully
+    volumes:
+      - redis_data:/data
+      - redis_secrets:/vault/secrets:ro
+      - ./docker/redis/entrypoint.sh:/usr/local/bin/vault-entrypoint.sh:ro
+    entrypoint: ["sh", "/usr/local/bin/vault-entrypoint.sh"]
+    networks:
+      internal:
+
+  service:
+    <<: *base
+    build:
+      context: .
+      args:
+        BASE_IMAGE: ${APP_BASE_IMAGE:?}
+    image: ${SERVICE_NAME}:latest
+    container_name: ${SERVICE_NAME}-app
+    env_file:
+      - .env
+    environment:
+      VAULT_ROOT_TOKEN: ""
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+    depends_on:
+      postgresql-primary:
+        condition: service_healthy
+      postgresql-replica:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      kafka-connect:
+        condition: service_started
+      debezium-init:
+        condition: service_completed_successfully
+      vault-init:
+        condition: service_completed_successfully
+      vault-secrets-init:
+        condition: service_completed_successfully
+    volumes:
+      - uploads_data:/app/uploads
+      - application_secrets:/vault/secrets:ro
+      - ./docker/app/entrypoint.sh:/usr/local/bin/vault-entrypoint.sh:ro
+    entrypoint: ["sh", "/usr/local/bin/vault-entrypoint.sh"]
+    networks:
+      monitoring_net:
+        aliases:
+          - template-service
+      kafka_net:
+      internal:
+    stop_grace_period: 1s
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://host.docker.internal:3100/loki/api/v${API_VERSION}/push"
+        loki-external-labels: "job=template-service,container_name={{.Name}}"
+        loki-batch-size: "100"
+        loki-retries: "3"
+        loki-timeout: "1s"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:${APP_PORT}/api/v${API_VERSION}/health/liveness"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  postgres_primary_data: {}
+  postgres_replica_data: {}
+  vault_secrets_token: {}
+  application_secrets: {}
+  postgresql_secrets: {}
+  debezium_secrets: {}
+  redis_secrets: {}
+  uploads_data: {}
+  redis_data: {}
+
+networks:
+  internal:
+    driver: bridge
+  monitoring_net:
+    external: true
+    name: ${DOCKER_NETWORK_MONITORING}
+  kafka_net:
+    external: true
+    name: ${DOCKER_NETWORK_KAFKA}
+  vault_net:
+    external: true
+    name: ${DOCKER_NETWORK_VAULT}

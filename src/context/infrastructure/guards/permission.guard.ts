@@ -1,0 +1,69 @@
+import { CanActivate, ExecutionContext, Inject, Injectable } from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
+
+import { REQUIRE_GLOBAL_PERMISSION, REQUIRE_PERMISSION, IS_PUBLIC } from "~common/decorators";
+import { ACCESS_CACHE_SERVICE } from "~context/infrastructure/services/tokens";
+import { SYSTEM_REALM_ID } from "~context/constants";
+import { Exception } from "~common/exceptions";
+
+@Injectable()
+export class PermissionGuard implements CanActivate {
+    private readonly dictionaryPath = "guard.permission";
+
+    public constructor(
+        @Inject(ACCESS_CACHE_SERVICE)
+        private readonly accessCacheService: InfrastructureServices.AccessCache.Contract,
+        private readonly reflector: Reflector,
+    ) {}
+
+    public async canActivate(context: ExecutionContext): Promise<boolean> {
+        const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC, [context.getHandler(), context.getClass()]);
+
+        if (isPublic) {
+            return true;
+        }
+
+        const globalPermissions = this.reflector.getAllAndOverride<string[]>(REQUIRE_GLOBAL_PERMISSION, [
+            context.getHandler(),
+            context.getClass(),
+        ]);
+
+        const permissions =
+            globalPermissions ??
+            this.reflector.getAllAndOverride<string[]>(REQUIRE_PERMISSION, [context.getHandler(), context.getClass()]);
+
+        if (!permissions?.length) {
+            return true;
+        }
+
+        const request = context.switchToHttp().getRequest<Req<{ Querystring: { realm?: string } }>>();
+        const realm = request.query?.realm ?? SYSTEM_REALM_ID;
+        const account = request.session?.account;
+
+        if (!account) {
+            throw Exception.forbidden({ messageKey: `${this.dictionaryPath}.ACCOUNT_REQUIRED` });
+        }
+
+        if (!realm) {
+            throw Exception.forbidden({ messageKey: `${this.dictionaryPath}.REALM_REQUIRED` });
+        }
+
+        const matched = await this.accessCacheService.checkPermissions({
+            globalOnly: Boolean(globalPermissions),
+            permissions,
+            account,
+            realm,
+        });
+
+        if (!matched.length) {
+            throw Exception.forbidden({ messageKey: `${this.dictionaryPath}.INSUFFICIENT_PERMISSIONS` });
+        }
+
+        request.metadata = {
+            ...request.metadata,
+            permissions: matched,
+        };
+
+        return true;
+    }
+}

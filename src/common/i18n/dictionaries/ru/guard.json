@@ -1,0 +1,16 @@
+{
+  "permission": {
+    "ACCOUNT_REQUIRED": "Для выполнения операции требуется аутентифицированная учетная запись.",
+    "REALM_REQUIRED": "Для выполнения операции требуется указать realm.",
+    "INSUFFICIENT_PERMISSIONS": "Недостаточно прав для выполнения операции."
+  },
+  "authn": {
+    "TOKEN_MISSING": "Требуется токен аутентификации.",
+    "MALFORMED_AUTHORIZATION": "Заголовок Authorization имеет неверный формат.",
+    "SESSION_REVOKED": "Сессия была отозвана."
+  },
+  "reauthentication": {
+    "REAUTHENTICATION_REQUIRED": "Для выполнения операции требуется повторная аутентификация.",
+    "NOT_AUTHENTICATED": "Для повторной аутентификации требуется активная сессия."
+  }
+}

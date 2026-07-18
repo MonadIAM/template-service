@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "assets": [
+      {
+        "include": "context/infrastructure/scripts/**/*.lua",
+        "outDir": "dist/src",
+        "watch": true
+      },
+      {
+        "include": "common/i18n/dictionaries/**/*.json",
+        "outDir": "dist/src",
+        "watch": true
+      },
+      {
+        "include": "bootstrap/swagger.md",
+        "outDir": "dist/src",
+        "watch": true
+      }
+    ],
+    "watchAssets": true
+  }
+}
