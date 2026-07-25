@@ -1,6 +1,6 @@
 import { AnyEntity, EntityManager } from "@mikro-orm/postgresql";
-import { AuditLogTopicAction } from "@monadiam/shared";
 import { InjectEntityManager } from "@mikro-orm/nestjs";
+import { AuditLogTopicAction } from "@monadiam/shared";
 import { ConfigService } from "@nestjs/config";
 import { Injectable } from "@nestjs/common";
 
@@ -11,7 +11,7 @@ import { OperationContext } from "../utilities/operation-context";
 import { AuditLog, Outbox } from "../entities";
 
 @Injectable()
-export class TransactionalService {
+export class TransactionalService implements TransactionManager.Service.Contract {
     private readonly serviceName: string;
 
     public constructor(
@@ -23,7 +23,9 @@ export class TransactionalService {
         this.serviceName = this.configService.getOrThrow<string>("SERVICE_NAME");
     }
 
-    public async run<T extends AnyEntity | AnyEntity[]>(params: TransactionManager.Service.Run<T>): Promise<T | void> {
+    public async run<T extends AnyEntity | AnyEntity[]>(
+        params: TransactionManager.Service.Run.Props<T>,
+    ): TransactionManager.Service.Run.Result<T> {
         try {
             const writeManager = this.writeManager.fork();
 
@@ -40,13 +42,13 @@ export class TransactionalService {
                             transaction.persist(auditEntry);
                             transaction.persist(this.buildAuditLogArchiveOutbox(auditEntry));
 
-                            return await this.executeWithEffects(params, transaction);
+                            return await this.executeWithEffects({ transaction, params });
                         });
                     },
                 );
             } else {
                 return await writeManager.transactional(async (transaction) => {
-                    return await this.executeWithEffects(params, transaction);
+                    return await this.executeWithEffects({ transaction, params });
                 });
             }
         } catch (error) {
@@ -54,14 +56,14 @@ export class TransactionalService {
         }
     }
 
-    private async executeWithEffects<T extends AnyEntity | AnyEntity[]>(
-        params: TransactionManager.Service.Run<T>,
-        transaction: EntityManager,
-    ): Promise<T | void> {
+    public async executeWithEffects<T extends AnyEntity | AnyEntity[]>(
+        props: TransactionManager.Service.ExecuteWithEffects.Props<T>,
+    ): TransactionManager.Service.ExecuteWithEffects.Result<T> {
+        const { transaction, params } = props;
         const result = await params.execute(transaction);
 
         if (result) {
-            this.persistOutboxEvents(params, transaction, result);
+            this.persistOutboxEvents({ transaction, params, result });
         }
 
         await transaction.flush();
@@ -69,11 +71,11 @@ export class TransactionalService {
         return result;
     }
 
-    private persistOutboxEvents<T extends AnyEntity | AnyEntity[]>(
-        params: TransactionManager.Service.Run<T>,
-        transaction: EntityManager,
-        result: T,
-    ): void {
+    public persistOutboxEvents<T extends AnyEntity | AnyEntity[]>(
+        props: TransactionManager.Service.PersistOutboxEvents.Props<T>,
+    ): TransactionManager.Service.PersistOutboxEvents.Result {
+        const { transaction, params, result } = props;
+
         if (params.outbox) {
             const entries = [params.outbox].flat();
 
@@ -87,21 +89,22 @@ export class TransactionalService {
         }
     }
 
-    private buildAuditLogArchiveOutbox(auditEntry: AuditLog): Outbox {
+    public buildAuditLogArchiveOutbox(
+        props: TransactionManager.Service.BuildAuditLogArchiveOutbox.Props,
+    ): TransactionManager.Service.BuildAuditLogArchiveOutbox.Result {
         return new Outbox({
             destinationTopic: KafkaTopic.AUDIT_LOG_ARCHIVE,
             actionType: AuditLogTopicAction.ARCHIVE,
             payload: {
-                id: auditEntry.id,
+                input: props.input ? JSON.stringify(props.input) : null,
+                created_at: props.createdAt.toISOString(),
+                user_agent: props.userAgent ?? null,
+                action_type: props.actionType,
+                entity_type: props.entityType,
                 service: this.serviceName,
-                created_at: auditEntry.createdAt.toISOString(),
-                action_type: auditEntry.actionType,
-                entity_type: auditEntry.entityType,
-                realm: auditEntry.realm ?? null,
-                actor: auditEntry.actor,
-                ip: auditEntry.ip ?? null,
-                user_agent: auditEntry.userAgent ?? null,
-                input: auditEntry.input ? JSON.stringify(auditEntry.input) : null,
+                ip: props.ip ?? null,
+                actor: props.actor,
+                id: props.id,
             },
         });
     }
