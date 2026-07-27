@@ -3,7 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import ms, { StringValue } from "ms";
 import Redis from "ioredis";
 
-import { REDIS_CACHE_CLIENT } from "~infrastructure/redis/tokens";
+import { REDIS_CACHE_CLIENT } from "~infrastructure/redis";
 import { AccessControlClient } from "~infrastructure/grpc";
 
 @Injectable()

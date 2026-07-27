@@ -2,9 +2,10 @@ import { CanActivate, ExecutionContext, Inject, Injectable } from "@nestjs/commo
 import { Reflector } from "@nestjs/core";
 
 import { REQUIRE_GLOBAL_PERMISSION, REQUIRE_PERMISSION, IS_PUBLIC } from "~common/decorators";
-import { ACCESS_CACHE_SERVICE } from "~context/infrastructure/services/tokens";
 import { SYSTEM_REALM_ID } from "~context/constants";
 import { Exception } from "~common/exceptions";
+
+import { ACCESS_CACHE_SERVICE } from "../services";
 
 @Injectable()
 export class PermissionGuard implements CanActivate {

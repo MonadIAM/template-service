@@ -3,7 +3,7 @@ import { Controller, Inject, Logger, OnModuleInit } from "@nestjs/common";
 import { InvalidationScope, KafkaTopic } from "@monadiam/shared";
 import { lastValueFrom } from "rxjs";
 
-import { ACCESS_CACHE_SERVICE } from "~context/infrastructure/services/tokens";
+import { ACCESS_CACHE_SERVICE } from "~context/infrastructure/services";
 import { KafkaUtils, KAFKA_SERVICE } from "~infrastructure/kafka";
 import { Exception } from "~common/exceptions";
 
