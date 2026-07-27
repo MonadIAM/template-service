@@ -1,4 +1,4 @@
-import { AnyEntity, EntityKey, Knex, QueryOrder } from "@mikro-orm/postgresql";
+import { QueryOrder } from "@mikro-orm/postgresql";
 
 import { LinkFilterDTO, OrdinalFilterDTO, StringFilterDTO } from "~common/dto";
 
@@ -6,7 +6,7 @@ import { PublicOrdinalOperator, PublicStringOperator } from "../enums";
 
 /** @public */
 export class KnexAdapter {
-    public static pagination(query: Knex.QueryBuilder, pagination: Pagination): Knex.QueryBuilder {
+    public static pagination(query: ORM.QueryBuilder, pagination: Pagination): ORM.QueryBuilder {
         if (pagination) {
             query.limit(pagination.elementsPerPage);
             query.offset((pagination.currentPage - 1) * pagination.elementsPerPage);
@@ -15,7 +15,7 @@ export class KnexAdapter {
     }
 
     public static applyStringFilter(
-        query: Knex.QueryBuilder,
+        query: ORM.QueryBuilder,
         filter: StringFilterDTO | LinkFilterDTO,
         column: string,
     ): void {
@@ -47,7 +47,7 @@ export class KnexAdapter {
     }
 
     public static applyOrdinalFilter<T extends Ordinal>(
-        query: Knex.QueryBuilder,
+        query: ORM.QueryBuilder,
         filter: OrdinalFilterDTO<T>,
         column: string,
     ): void {
@@ -84,11 +84,11 @@ export class KnexAdapter {
         }
     }
 
-    public static orderBy<T extends AnyEntity>(
-        query: Knex.QueryBuilder,
+    public static orderBy<T extends ORM.AnyEntity>(
+        query: ORM.QueryBuilder,
         sort: Record<string, QueryOrder>,
         tableAlias: string,
-        basicSort: [EntityKey<T>, QueryOrder],
+        basicSort: [ORM.EntityKey<T>, QueryOrder],
     ): void {
         const entries = Object.typedEntries(sort);
         if (entries.length > 0) {
