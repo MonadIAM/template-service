@@ -23,7 +23,7 @@ export class ChangeLogSubscriber implements ORM.EventSubscriber {
     public onFlush({ uow, em }: ORM.FlushEventArgs): void {
         const context = this.operationContext.get();
         if (context?.changeLogEnabled) {
-            const changeSets = uow.getChangeSets().filter((set) => !EXCLUDED_ENTITIES.has(set.name));
+            const changeSets = uow.getChangeSets().filter((set) => !EXCLUDED_ENTITIES.has(set.meta.className));
 
             if (changeSets.length) {
                 for (const changeSet of changeSets) {
@@ -33,7 +33,7 @@ export class ChangeLogSubscriber implements ORM.EventSubscriber {
                             entity: String(changeSet.getPrimaryKey()),
                             auditEntry: context.auditEntry,
                             changeType: changeSet.type,
-                            entityType: changeSet.name,
+                            entityType: changeSet.meta.className,
                             delta,
                         });
 

@@ -1,5 +1,5 @@
+import { type ClientGrpc as ClientGRPC } from "@nestjs/microservices";
 import { Inject, Injectable, OnModuleInit } from "@nestjs/common";
-import { ClientGrpc as ClientGRPC } from "@nestjs/microservices";
 import { firstValueFrom } from "rxjs";
 
 import { GRPC_CONFIG } from "./tokens";
