@@ -1,10 +1,10 @@
 declare namespace InfrastructureServices {
     namespace AccessCache {
-        interface PrivateContract {
+        interface InternalContract {
             resolveVersionedKey(props: ResolveVersionedKey.Props): ResolveVersionedKey.Result;
         }
 
-        interface Contract extends PrivateContract {
+        interface Contract extends InternalContract {
             checkPermissions(props: CheckPermissions.Props): CheckPermissions.Result;
             deleteAccount(props: DeleteAccount.Props): DeleteAccount.Result;
             deleteRealm(props: DeleteRealm.Props): DeleteRealm.Result;

@@ -8,7 +8,7 @@ declare global {
                 run(props: Run.VoidProps): Promise<void>;
             }
 
-            interface PrivateContract {
+            interface InternalContract {
                 buildAuditLogArchiveOutbox(props: BuildAuditLogArchiveOutbox.Props): BuildAuditLogArchiveOutbox.Result;
                 persistOutboxEvents<T extends ORM.AnyEntity | ORM.AnyEntity[]>(
                     props: PersistOutboxEvents.Props<T>,
@@ -18,7 +18,7 @@ declare global {
                 ): ExecuteWithEffects.Result<T>;
             }
 
-            interface Contract extends PublicContract, PrivateContract {}
+            interface Contract extends PublicContract, InternalContract {}
 
             type OutboxConfig<T> = {
                 payloadMapper?(result: T): ORM.AnyEntity | ORM.AnyEntity[];
