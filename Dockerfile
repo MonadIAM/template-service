@@ -6,9 +6,9 @@ FROM ${BASE_IMAGE} AS builder
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY package*.json .npmrc ./
 
-RUN --mount=type=cache,target=/root/.npm npm ci --strict-peer-deps=false
+RUN --mount=type=cache,target=/root/.npm npm ci
 
 COPY . .
 RUN npm run build
@@ -18,8 +18,8 @@ FROM ${BASE_IMAGE} AS runner
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev --strict-peer-deps=false
+COPY package*.json .npmrc ./
+RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
 
