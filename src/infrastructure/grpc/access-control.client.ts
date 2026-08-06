@@ -6,7 +6,7 @@ import { GRPC_CONFIG } from "./tokens";
 
 @Injectable()
 export class AccessControlClient implements GRPC.AccessControl.Contract, OnModuleInit {
-    declare private service: GRPC.AccessControl.Service;
+    declare private service: GRPC.AccessControl.Service.Contract;
 
     public constructor(
         @Inject(GRPC_CONFIG)
@@ -14,7 +14,7 @@ export class AccessControlClient implements GRPC.AccessControl.Contract, OnModul
     ) {}
 
     public onModuleInit(): void {
-        this.service = this.client.getService<GRPC.AccessControl.Service>("AccessControlService");
+        this.service = this.client.getService<GRPC.AccessControl.Service.Contract>("AccessControlService");
     }
 
     public async listEffectivePrivileges(

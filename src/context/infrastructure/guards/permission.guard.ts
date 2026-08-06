@@ -13,7 +13,7 @@ export class PermissionGuard implements CanActivate {
 
     public constructor(
         @Inject(ACCESS_CACHE_SERVICE)
-        private readonly accessCacheService: InfrastructureServices.AccessCache.Contract,
+        private readonly accessCacheService: InfrastructureServices.AccessCache.PublicContract,
         private readonly reflector: Reflector,
     ) {}
 

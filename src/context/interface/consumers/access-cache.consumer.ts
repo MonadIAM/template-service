@@ -13,7 +13,7 @@ export class AccessCacheConsumer implements Consumers.AccessCache.Contract, OnMo
 
     public constructor(
         @Inject(ACCESS_CACHE_SERVICE)
-        private readonly accessCacheService: InfrastructureServices.AccessCache.Contract,
+        private readonly accessCacheService: InfrastructureServices.AccessCache.PublicContract,
         @Inject(KAFKA_SERVICE)
         private readonly kafkaClient: ClientKafka,
     ) {}
@@ -23,7 +23,10 @@ export class AccessCacheConsumer implements Consumers.AccessCache.Contract, OnMo
     }
 
     @EventPattern(KafkaTopic.ACCESS_CACHE)
-    public async handle(@Payload() message: Consumers.AccessCache.Message, @Ctx() context: KafkaContext): Promise<void> {
+    public async handle(
+        @Payload() message: Consumers.AccessCache.Message,
+        @Ctx() context: KafkaContext,
+    ): Consumers.AccessCache.Handle.Result {
         try {
             for await (const item of message.payload.items) {
                 switch (item.scope) {

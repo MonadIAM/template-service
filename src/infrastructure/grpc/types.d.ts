@@ -5,19 +5,30 @@ declare global {
     namespace GRPC {
         namespace AccessControl {
             interface Contract {
-                listEffectivePrivileges(props: ListEffectivePrivileges.Props): ListEffectivePrivileges.Result;
+                listEffectivePrivileges: ListEffectivePrivileges.Signature;
             }
 
             namespace ListEffectivePrivileges {
                 type Props = ListEffectivePrivilegesRequest;
+
                 type Result = Promise<Record<string, string>>;
+
+                type Signature = (props: Props) => Result;
             }
 
-            type Service = {
-                listEffectivePrivileges(
-                    request: ListEffectivePrivilegesRequest,
-                ): Observable<ListEffectivePrivilegesResponse>;
-            };
+            namespace Service {
+                interface Contract {
+                    listEffectivePrivileges: ListEffectivePrivileges.Signature;
+                }
+
+                namespace ListEffectivePrivileges {
+                    type Props = ListEffectivePrivilegesRequest;
+
+                    type Result = Observable<ListEffectivePrivilegesResponse>;
+
+                    type Signature = (props: Props) => Result;
+                }
+            }
         }
     }
 }

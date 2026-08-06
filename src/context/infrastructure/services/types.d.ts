@@ -1,31 +1,99 @@
 declare namespace InfrastructureServices {
-    namespace AccessCache {
-        interface InternalContract {
-            resolveVersionedKey(props: ResolveVersionedKey.Props): ResolveVersionedKey.Result;
+    namespace ReauthenticationCache {
+        interface Contract extends PublicContract {}
+
+        interface PublicContract {
+            exists: Exists.Signature;
+            delete: Delete.Signature;
+            set: Set.Signature;
         }
 
-        interface Contract extends InternalContract {
-            checkPermissions(props: CheckPermissions.Props): CheckPermissions.Result;
-            deleteAccount(props: DeleteAccount.Props): DeleteAccount.Result;
-            deleteRealm(props: DeleteRealm.Props): DeleteRealm.Result;
-            delete(props: Delete.Props): Delete.Result;
-            deleteAll(): DeleteAll.Result;
-        }
-
-        namespace DeleteAccount {
+        namespace Exists {
             type Props = {
-                account: string;
+                session: string;
+            };
+
+            type Result = Promise<boolean>;
+
+            type Signature = (props: Props) => Result;
+        }
+
+        namespace Delete {
+            type Props = {
+                session: string;
             };
 
             type Result = Promise<void>;
+
+            type Signature = (props: Props) => Result;
         }
 
-        namespace DeleteRealm {
+        namespace Set {
             type Props = {
+                session: string;
+                ttl: number;
+            };
+
+            type Result = Promise<void>;
+
+            type Signature = (props: Props) => Result;
+        }
+    }
+
+    namespace BlacklistCache {
+        interface Contract extends PublicContract {}
+
+        interface PublicContract {
+            exists: Exists.Signature;
+            set: Set.Signature;
+        }
+
+        namespace Exists {
+            type Props = {
+                session: string;
+            };
+
+            type Result = Promise<boolean>;
+
+            type Signature = (props: Props) => Result;
+        }
+
+        namespace Set {
+            type Props = {
+                session: string;
+                ttl: number;
+            };
+
+            type Result = Promise<void>;
+
+            type Signature = (props: Props) => Result;
+        }
+    }
+
+    namespace AccessCache {
+        interface Contract extends InternalContract, PublicContract {}
+
+        interface InternalContract {
+            resolveVersionedKey: ResolveVersionedKey.Signature;
+        }
+
+        namespace ResolveVersionedKey {
+            type Props = {
+                account: string;
                 realm: string;
             };
 
-            type Result = Promise<void>;
+            type Result = Promise<string>;
+
+            type Signature = (props: Props) => Result;
+        }
+
+        interface PublicContract {
+            checkPermissions: CheckPermissions.Signature;
+            deleteAccount: DeleteAccount.Signature;
+            deleteRealm: DeleteRealm.Signature;
+            deleteAll: DeleteAll.Signature;
+            delete: Delete.Signature;
         }
 
         namespace CheckPermissions {
@@ -37,6 +105,34 @@ declare namespace InfrastructureServices {
             };
 
             type Result = Promise<string[]>;
+
+            type Signature = (props: Props) => Result;
+        }
+
+        namespace DeleteAccount {
+            type Props = {
+                account: string;
+            };
+
+            type Result = Promise<void>;
+
+            type Signature = (props: Props) => Result;
+        }
+
+        namespace DeleteRealm {
+            type Props = {
+                realm: string;
+            };
+
+            type Result = Promise<void>;
+
+            type Signature = (props: Props) => Result;
+        }
+
+        namespace DeleteAll {
+            type Result = Promise<void>;
+
+            type Signature = () => Result;
         }
 
         namespace Delete {
@@ -46,56 +142,8 @@ declare namespace InfrastructureServices {
             };
 
             type Result = Promise<void>;
+
+            type Signature = (props: Props) => Result;
         }
-
-        namespace DeleteAll {
-            type Result = Promise<void>;
-        }
-
-        namespace ResolveVersionedKey {
-            type Props = {
-                account: string;
-                realm: string;
-            };
-
-            type Result = Promise<string>;
-        }
-    }
-
-    namespace ReauthenticationCache {
-        interface Contract {
-            set(props: Set): Promise<void>;
-            exists(props: Exists): Promise<boolean>;
-            delete(props: Delete): Promise<void>;
-        }
-
-        type Set = {
-            session: string;
-            ttl: number;
-        };
-
-        type Exists = {
-            session: string;
-        };
-
-        type Delete = {
-            session: string;
-        };
-    }
-
-    namespace BlacklistCache {
-        interface Contract {
-            exists(props: Exists): Promise<boolean>;
-            set(props: Set): Promise<void>;
-        }
-
-        type Set = {
-            session: string;
-            ttl: number;
-        };
-
-        type Exists = {
-            session: string;
-        };
     }
 }

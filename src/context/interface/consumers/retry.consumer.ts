@@ -11,7 +11,7 @@ const RETRY_TOPICS: KafkaTopic[] = [];
 const DEAD_TOPIC_MAP: Partial<Record<string, string>> = {};
 
 @Controller()
-export class RetryConsumer implements OnModuleInit {
+export class RetryConsumer implements Consumers.Retry.Contract, OnModuleInit {
     public constructor(
         @Inject(KAFKA_SERVICE)
         private readonly kafkaClient: ClientKafka,
@@ -24,17 +24,20 @@ export class RetryConsumer implements OnModuleInit {
     }
 
     @EventPattern(RETRY_TOPICS)
-    public async handle(@Payload() message: Consumers.DLQ.Message, @Ctx() context: KafkaContext): Promise<void> {
+    public async handle(
+        @Payload() message: Consumers.Retry.Message,
+        @Ctx() context: KafkaContext,
+    ): Consumers.Retry.Handle.Result {
         const retryCount = KafkaUtils.extractRetryCount(context);
 
         if (retryCount >= this.kafkaRetryQueue.maxRetryCount) {
             await this.moveToDeadLetter(message);
         } else {
-            await this.kafkaRetryQueue.schedule(message, retryCount);
+            await this.kafkaRetryQueue.schedule({ message, retryCount });
         }
     }
 
-    private async moveToDeadLetter(message: Consumers.DLQ.Message): Promise<void> {
+    private async moveToDeadLetter(message: Consumers.Retry.Message): Promise<void> {
         const deadTopic = DEAD_TOPIC_MAP[message.originalTopic];
         if (deadTopic) {
             await lastValueFrom(this.kafkaClient.emit(deadTopic, message));
