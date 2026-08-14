@@ -45,6 +45,7 @@ declare global {
             interface PublicContract {
                 run<T extends ORM.AnyEntity | ORM.AnyEntity[]>(props: Run.ResultProps<T>): Promise<T>;
                 run(props: Run.VoidProps): Promise<void>;
+                emit(props: Emit.Props): Emit.Result;
             }
 
             namespace Run {
@@ -59,7 +60,7 @@ declare global {
                 type VoidProps = {
                     execute(transaction: ORM.EntityManager): Promise<void> | void;
                     audit?: SystemEntities.AuditLog.ConstructorProps;
-                    changeLog?: never;
+                    changeLog?: boolean;
                     resource?: string;
                     outbox?: never;
                 };
@@ -69,12 +70,31 @@ declare global {
                 type Result<T> = Promise<T | void>;
             }
 
+            namespace Emit {
+                type Props = {
+                    [D in keyof OutboxPayloadMap]: {
+                        audit?: SystemEntities.AuditLog.ConstructorProps;
+                        payload: OutboxPayloadMap[D];
+                        metadata?: UnknownObject;
+                        destinationTopic: D;
+                        actionType: string;
+                        resource?: string;
+                    };
+                }[keyof OutboxPayloadMap];
+
+                type Result = Promise<void>;
+            }
+
+            type OutboxPayloadMap = Record<KafkaTopic, never>;
+
             type OutboxConfig<T> = {
-                payloadMapper?(result: T): ORM.AnyEntity | ORM.AnyEntity[];
-                destinationTopic: KafkaTopic;
-                metadata?: UnknownObject;
-                actionType: string;
-            };
+                [D in keyof OutboxPayloadMap]: {
+                    payloadMapper?(result: T): OutboxPayloadMap[D] | OutboxPayloadMap[D][];
+                    metadata?: UnknownObject;
+                    destinationTopic: D;
+                    actionType: string;
+                };
+            }[keyof OutboxPayloadMap];
         }
     }
 }
