@@ -3,6 +3,7 @@ import { Reflector } from "@nestjs/core";
 
 import { REQUIRE_GLOBAL_PERMISSION, REQUIRE_PERMISSION, IS_PUBLIC } from "~common/decorators";
 import { SYSTEM_REALM_ID } from "~context/constants";
+import { PermissionCode } from "~context/enums";
 import { Exception } from "~common/exceptions";
 
 import { ACCESS_CACHE_SERVICE } from "../services";
@@ -24,14 +25,17 @@ export class PermissionGuard implements CanActivate {
             return true;
         }
 
-        const globalPermissions = this.reflector.getAllAndOverride<string[]>(REQUIRE_GLOBAL_PERMISSION, [
+        const globalPermissions = this.reflector.getAllAndOverride<PermissionCode[]>(REQUIRE_GLOBAL_PERMISSION, [
             context.getHandler(),
             context.getClass(),
         ]);
 
         const permissions =
             globalPermissions ??
-            this.reflector.getAllAndOverride<string[]>(REQUIRE_PERMISSION, [context.getHandler(), context.getClass()]);
+            this.reflector.getAllAndOverride<PermissionCode[]>(REQUIRE_PERMISSION, [
+                context.getHandler(),
+                context.getClass(),
+            ]);
 
         if (!permissions?.length) {
             return true;
@@ -40,6 +44,7 @@ export class PermissionGuard implements CanActivate {
         const request = context.switchToHttp().getRequest<Req<{ Querystring: { realm?: string } }>>();
         const realm = request.query?.realm ?? SYSTEM_REALM_ID;
         const account = request.session?.account;
+        const realms = request.session?.realms;
 
         if (!account) {
             throw Exception.forbidden({ messageKey: `${this.dictionaryPath}.ACCOUNT_REQUIRED` });
@@ -47,6 +52,16 @@ export class PermissionGuard implements CanActivate {
 
         if (!realm) {
             throw Exception.forbidden({ messageKey: `${this.dictionaryPath}.REALM_REQUIRED` });
+        }
+
+        if (!realms?.length) {
+            throw Exception.forbidden({ messageKey: `${this.dictionaryPath}.REALM_SCOPE_MISSING` });
+        }
+
+        if (globalPermissions && !(realms.length === 1 && realms[0] === SYSTEM_REALM_ID)) {
+            throw Exception.forbidden({ messageKey: `${this.dictionaryPath}.GLOBAL_SCOPE_REQUIRES_DIRECT_LOGIN` });
+        } else if (!realms.includes(realm)) {
+            throw Exception.forbidden({ messageKey: `${this.dictionaryPath}.REALM_OUT_OF_SESSION_SCOPE` });
         }
 
         const matched = await this.accessCacheService.checkPermissions({
