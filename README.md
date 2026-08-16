@@ -42,7 +42,8 @@ Grow your own domain on top of `context/domain`, `context/application`, `context
     - Prometheus metrics.
 
 - **Vault-backed secrets** (`docker/vault`):
-    - Postgres/Redis/Debezium credentials are minted at boot by `vault-init`/`vault-secrets-init` sidecars and rendered into files under `/vault/secrets` — never baked into images or committed to `.env`.
+    - Provisioning (policies, KV paths, AppRole role) happens once in the `infra` repo's Terraform config, not here - this repo's `docker/vault/bootstrap.sh` only mints a one-time-use AppRole `secret_id`, and `vault-agent` authenticates with it and renders secrets to files under `/vault/secrets` - never baked into images or committed to `.env`.
+    - The application's own Postgres credential is dynamic (Vault Database Secrets Engine, short-lived, auto-renewed) rather than a static password - see `infra/terraform/08-database.tf`.
 
 - Standard cross-cutting layer: exceptions, i18n (`en`/`ru`), interceptors, DTO/validation base classes, rate
   limiting (Redis-backed, distributed), CI (gitleaks + lint + typecheck + tests), git hooks.
@@ -116,7 +117,7 @@ docker exec -it template-service-postgres-replica psql -U user -d template-servi
 | Command                                              | Makefile                  | Description                                                        |
 |:-----------------------------------------------------|:--------------------------|:-------------------------------------------------------------------|
 | **Infrastructure**                                   |                           |                                                                    |
-| `[ -f .env.example ] && cp -f .env.example .env ...` | `make env`                | Generate `.env` and `.vault.env` from their examples (if present). |
+| `[ -f .env.example ] && cp -f .env.example .env ...` | `make env`                | Generate `.env` from its example (if present).                     |
 | `docker-compose up -d`                               | `make up`                 | Start all services in detached mode.                               |
 | `docker-compose stop`                                | `make stop`               | Stop containers without removing them.                             |
 | `docker-compose down`                                | `make down`               | Stop and remove containers and networks.                           |
