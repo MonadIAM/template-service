@@ -70,8 +70,8 @@ and their `application/queries` counterparts as a reference.
 
 2. Make sure the [infra](https://github.com/MonadIAM/infra), [access-control-service](https://github.com/MonadIAM/access-control-service), and [identity-service](https://github.com/MonadIAM/identity-service) repositories are already running locally.
 
-3. Make sure `DOCKER_NETWORK_KAFKA`, `DOCKER_NETWORK_MONITORING`, `DOCKER_NETWORK_VAULT`, and `DOCKER_NETWORK_CONSUL`
-   in `.env` match the actual Docker network names (defaults below), or your custom ones.
+3. Make sure `DOCKER_NETWORK_KAFKA`, `DOCKER_NETWORK_MONITORING`, `DOCKER_NETWORK_VAULT`, `DOCKER_NETWORK_CONSUL`,
+   and `DOCKER_VOLUME_VAULT_CA` in `.env` match the actual shared Docker resource names (defaults below), or your custom ones.
 
 4. Create shared Docker networks for inter-service communication, monitoring, Vault, and Consul (shared DCS for
    Patroni - see the PostgreSQL HA section below):
