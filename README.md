@@ -30,7 +30,7 @@ Grow your own domain on top of `context/domain`, `context/application`, `context
 - **Audit/Change log + outbox archival** (`common/transaction-manager`):
     - `TransactionalService` wraps every write in a MikroORM transaction, optionally records an `AuditLog` entry, and always mirrors it into `system.outbox`, from which Debezium ships it to `audit-log-archive` / `change-log-archive`.
     - `ChangeLogSubscriber` automatically derives field-level `ChangeLog` deltas for any entity mutated inside a `changeLog: true` operation.
-    - Debezium EventRouter config — see `docker/debezium/connector.outbox.json.tpl`; the ingestion side is `infra`'s ClickHouse schema.
+    - Debezium EventRouter config is owned by `infra`; the service only writes to `system.outbox`.
 
 - **BullMQ retention cleanup** (`context/infrastructure/queues/cleanup`, `context/interface/schedulers`):
     - Daily cron jobs purge expired `AuditLog`/`ChangeLog` rows in batches, implemented as a domain service operating on the UoW transaction (repositories stay read-only by convention — see `AuditLogService`/`ChangeLogService`).
@@ -70,46 +70,21 @@ and their `application/queries` counterparts as a reference.
 
 2. Make sure the [infra](https://github.com/MonadIAM/infra), [access-control-service](https://github.com/MonadIAM/access-control-service), and [identity-service](https://github.com/MonadIAM/identity-service) repositories are already running locally.
 
-3. Make sure `DOCKER_NETWORK_KAFKA`, `DOCKER_NETWORK_MONITORING`, `DOCKER_NETWORK_VAULT`, `DOCKER_NETWORK_CONSUL`,
+3. Make sure `DOCKER_NETWORK_KAFKA`, `DOCKER_NETWORK_MONITORING`, `DOCKER_NETWORK_VAULT`, `DOCKER_NETWORK_POSTGRES`, `DOCKER_NETWORK_REDIS`,
    and `DOCKER_VOLUME_VAULT_CA` in `.env` match the actual shared Docker resource names (defaults below), or your custom ones.
 
-4. Create shared Docker networks for inter-service communication, monitoring, Vault, and Consul (shared DCS for
-   Patroni - see the PostgreSQL HA section below):
+4. Create shared Docker networks for inter-service communication, monitoring, Vault, PostgreSQL routing, and Redis:
 ```sh
 docker network create monitoring-network
-docker network create consul-net
 docker network create kafka-net
+docker network create postgres-net
+docker network create redis-net
 docker network create vault-net
 ```
 
 5. Install the Loki Docker plugin (allows log shipping without extra npm packages):
 ```sh
 docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions
-```
-
-</details>
-
-----
-
-<details>
-<summary><strong>PostgreSQL HA (Patroni)</strong></summary>
-
-PostgreSQL runs as a Patroni-managed cluster instead of a hand-rolled primary/replica pair - automatic failover, no fixed "primary container".
-
-#### Architecture
-- *`postgresql-1` / `postgresql-2`* — symmetric Patroni-managed nodes; which one is leader vs. replica is decided at runtime via the shared Consul cluster (from `infra`), not fixed by container name.
-- *`haproxy-write`* — routes to whichever node currently holds the leader lock (Patroni REST `GET /leader`). This is what `POSTGRES_WRITE_HOST`/`POSTGRES_HOST` point at.
-- *`haproxy-read`* — routes to healthy replicas (Patroni REST `GET /replica`). This is what `POSTGRES_READ_HOST` points at.
-- Both HAProxy instances build their backend list from the Consul service catalog via `consul-template` (`docker/haproxy/*.ctmpl`) - adding/removing a Patroni node needs no HAProxy config change.
-- The Debezium outbox connector keeps a permanent logical replication slot (`outbox_slot`, registered in `docker/postgres/patroni.yml`) so it survives a leader failover without a full resync.
-
-#### Checking cluster status
-```sh
-# Cluster-wide view (leader/replica roles, lag, timeline) via patronictl, from either node:
-docker exec -it template-service-postgres-1 patronictl -c /patroni.yml list
-
-# Per-node role via the Patroni REST API (port 8008 isn't published to the host, so this is run from inside the container):
-docker exec -it template-service-postgres-1 curl -s http://127.0.0.1:8008/patroni
 ```
 
 </details>

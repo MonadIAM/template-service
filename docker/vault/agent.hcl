@@ -24,24 +24,6 @@ auto_auth {
 }
 
 template {
-    contents    = "{{ with secret \"kv/data/template-service/runtime\" }}{{ .Data.data.redis_password }}{{ end }}"
-    destination = "/secrets/redis/redis_password"
-    perms       = "0440"
-}
-
-template {
-    contents    = "{{ with secret \"kv/data/template-service/postgresql-replication\" }}{{ .Data.data.postgresql_replication_password }}{{ end }}"
-    destination = "/secrets/postgresql/postgresql_replication_password"
-    perms       = "0440"
-}
-
-template {
-    contents    = "{{ with secret \"kv/data/template-service/runtime\" }}{{ .Data.data.postgresql_password }}{{ end }}"
-    destination = "/secrets/postgresql/postgresql_password"
-    perms       = "0440"
-}
-
-template {
     contents    = "{{ with secret \"database/creds/template-service-app\" }}{{ .Data.username }}{{ end }}"
     destination = "/secrets/application/postgresql_username"
     perms       = "0440"
@@ -56,11 +38,5 @@ template {
 template {
     contents    = "{{ with secret \"kv/data/template-service/runtime\" }}{{ .Data.data.redis_password }}{{ end }}"
     destination = "/secrets/application/redis_password"
-    perms       = "0440"
-}
-
-template {
-    contents    = "{{ with secret \"kv/data/template-service/runtime\" }}{{ .Data.data.postgresql_password }}{{ end }}"
-    destination = "/secrets/debezium/postgresql_password"
     perms       = "0440"
 }
