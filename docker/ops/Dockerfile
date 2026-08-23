@@ -5,8 +5,11 @@ FROM ${BASE_IMAGE}
 
 WORKDIR /app
 
-COPY package*.json .npmrc ./
-RUN --mount=type=cache,target=/root/.npm npm ci
+RUN corepack enable && corepack prepare pnpm@11.22.0 --activate
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile
 
 COPY . .
 
