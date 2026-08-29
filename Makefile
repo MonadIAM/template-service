@@ -1,53 +1,38 @@
-.PHONY: env up stop down build build-app build-ops restart logs logs-all ps clean prune lint knip swagger postman docs db-creds-readonly migrate migration seed test coverage
+.PHONY: env up down build restart lint knip swagger postman docs migrate migration empty-migration seed test coverage
 
-OPS_RUN = docker-compose --profile ops run --rm ops
+SERVICE_EXEC_WITH_SECRETS := docker-compose exec service sh /usr/local/bin/with-vault-secrets.sh
 
 # Infrastructure
 env:
-	[ -f .env.example ] && cp -f .env.example .env || echo '.env.example not found'
-up: build
+	[ -f .env.local.example ] && cp -f .env.local.example .env || echo '.env.local.example not found'
+build:
+	docker-compose build service
+up:
 	docker-compose up -d
-stop:
-	docker-compose stop
 down:
 	docker-compose down
-build: build-app build-ops
-build-app:
-	docker-compose build service
-build-ops:
-	docker-compose --profile ops build ops
 restart: down up
-logs:
-	docker-compose logs -f service
-logs-all:
-	docker-compose logs -f
-ps:
-	docker-compose ps
-clean:
-	docker-compose down -v
-prune:
-	docker system prune -f
 
 # Development
 lint:
-	npm run lint
+	pnpm run lint
 knip:
-	npm run knip
+	pnpm run knip
 swagger:
-	npm run swagger
+	pnpm run swagger
 postman:
-	npm run postman
+	pnpm run postman
 docs: swagger postman
 
 # Database
-db-creds-readonly:
-	sh docker/vault/fetch-creds.sh readonly
 migrate:
-	$(OPS_RUN) npx mikro-orm migration:up
+	$(SERVICE_EXEC_WITH_SECRETS) pnpm run db:migrate
 migration:
-	$(OPS_RUN) npx mikro-orm migration:create --name=$(name)
+	$(SERVICE_EXEC_WITH_SECRETS) pnpm exec mikro-orm migration:create --name=$(name)
+empty-migration:
+	$(SERVICE_EXEC_WITH_SECRETS) pnpm exec mikro-orm migration:create --blank --name=$(name)
 seed:
-	$(OPS_RUN) npx mikro-orm seeder:run
+	$(SERVICE_EXEC_WITH_SECRETS) pnpm run db:seed
 
 # Test
 test:
