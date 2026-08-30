@@ -15,11 +15,11 @@ const config: KnipConfig = {
         // Barrel files
         "src/**/index.ts",
         // Preload script
-        "src/observability/tracing/tracing.ts",
+        "src/infrastructure/schema-registry/script.ts",
+        "src/observability/tracing/script.ts",
     ],
     ignoreDependencies: [
         "@mikro-orm/entity-generator",
-        "@mikro-orm/cli",
         "@fastify/swagger-ui",
         "@fastify/swagger",
         "ts-jest",

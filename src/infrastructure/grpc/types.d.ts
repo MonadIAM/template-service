@@ -1,33 +1,24 @@
-import { ListEffectivePrivilegesRequest, ListEffectivePrivilegesResponse } from "@monadiam/shared";
 import { Observable } from "rxjs";
 
 declare global {
     namespace GRPC {
         namespace AccessControl {
-            interface Contract {
-                listEffectivePrivileges: ListEffectivePrivileges.Signature;
-            }
-
-            namespace ListEffectivePrivileges {
-                type Props = ListEffectivePrivilegesRequest;
-
-                type Result = Promise<Record<string, string>>;
-
-                type Signature = (props: Props) => Result;
-            }
-
             namespace Service {
                 interface Contract {
-                    listEffectivePrivileges: ListEffectivePrivileges.Signature;
+                    listEffectivePrivileges(props: Request): Observable<Response>;
                 }
 
-                namespace ListEffectivePrivileges {
-                    type Props = ListEffectivePrivilegesRequest;
+                type Request = GRPC.AccessControl.ListEffectivePrivileges.Request;
+                type Response = GRPC.AccessControl.ListEffectivePrivileges.Response;
+            }
 
-                    type Result = Observable<ListEffectivePrivilegesResponse>;
-
-                    type Signature = (props: Props) => Result;
+            namespace Client {
+                interface Contract {
+                    listEffectivePrivileges(props: Request): Response;
                 }
+
+                type Request = GRPC.AccessControl.ListEffectivePrivileges.Request;
+                type Response = Promise<GRPC.AccessControl.ListEffectivePrivileges.Response["privileges"]>;
             }
         }
     }
