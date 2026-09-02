@@ -1,0 +1,9 @@
+{
+  "jwt": {
+    "INVALID_ACCESS_TOKEN": "The access token is invalid or expired."
+  },
+  "vault": {
+    "REQUEST_FAILED": "Vault Transit request failed.",
+    "INVALID_SIGNATURE": "Vault Transit returned an invalid signature."
+  }
+}

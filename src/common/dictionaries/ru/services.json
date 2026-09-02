@@ -1,0 +1,9 @@
+{
+  "jwt": {
+    "INVALID_ACCESS_TOKEN": "Access-токен недействителен или просрочен."
+  },
+  "vault": {
+    "REQUEST_FAILED": "Запрос к Vault Transit завершился ошибкой.",
+    "INVALID_SIGNATURE": "Vault Transit вернул недействительную подпись."
+  }
+}
