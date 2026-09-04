@@ -17,7 +17,7 @@ export class AccessCacheService implements InfrastructureServices.AccessCache.Co
         private readonly configService: ConfigService,
         private readonly accessControlClient: AccessControlClient,
     ) {
-        this.ttl = ms(this.configService.getOrThrow<StringValue>("ACCESS_CACHE_TTL"));
+        this.ttl = ms(this.configService.getOrThrow<StringValue>("ACCESS_CACHE_TTL")) / 1e3;
     }
 
     public async checkPermissions(
@@ -102,11 +102,8 @@ export class AccessCacheService implements InfrastructureServices.AccessCache.Co
         const accountVersionKey = `${this.namespace}:account-version:${account}`;
         const realmVersionKey = `${this.namespace}:realm-version:${realm}`;
 
-        const [globalVersion = "0", accountVersion = "0", realmVersion = "0"] = await this.redis.mget(
-            globalVersionKey,
-            accountVersionKey,
-            realmVersionKey,
-        );
+        const versions = await this.redis.mget(globalVersionKey, accountVersionKey, realmVersionKey);
+        const [globalVersion, accountVersion, realmVersion] = versions.map((version) => version ?? "0");
 
         return `${this.namespace}:${globalVersion}:${account}:${accountVersion}:${realm}:${realmVersion}`;
     }
