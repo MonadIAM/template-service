@@ -4,6 +4,7 @@ import { InvalidationScope, KafkaTopic } from "@monadiam/shared";
 import { lastValueFrom } from "rxjs";
 
 import { KafkaTopicBuilder, KAFKA_RETRY_REGISTRY, KAFKA_SCHEMA_REGISTRY, KAFKA_SERVICE } from "~infrastructure/kafka";
+import { KafkaMetricsRecorder } from "~observability/metrics/kafka.recorder";
 import { ACCESS_CACHE_SERVICE } from "~context/infrastructure/services";
 import { Exception } from "~common/exceptions";
 
@@ -14,6 +15,8 @@ export class AccessCacheConsumer implements Consumers.AccessCache.Contract, OnMo
     public constructor(
         @Inject(ACCESS_CACHE_SERVICE)
         private readonly accessCacheService: InfrastructureServices.AccessCache.PublicContract,
+        @Inject(KafkaMetricsRecorder)
+        private readonly kafkaMetrics: Observability.Metrics.Kafka.PublicContract,
         @Inject(KAFKA_SCHEMA_REGISTRY)
         private readonly schemaRegistry: Kafka.SchemaRegistry.PublicContract,
         @Inject(KAFKA_RETRY_REGISTRY)
@@ -81,5 +84,11 @@ export class AccessCacheConsumer implements Consumers.AccessCache.Contract, OnMo
                 },
             ),
         );
+
+        if (retryable) {
+            this.kafkaMetrics.recordRetry({ topic: KafkaTopic.ACCESS_CACHE, error });
+        } else {
+            this.kafkaMetrics.recordDead({ topic: KafkaTopic.ACCESS_CACHE, error });
+        }
     }
 }
