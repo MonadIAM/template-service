@@ -13,3 +13,5 @@ allowBuilds:
   "@scarf/scarf": false
   "protobufjs": true
   "esbuild": true
+  "cpu-features": true
+  "ssh2": true

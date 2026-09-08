@@ -1,4 +1,4 @@
-.PHONY: env up down build restart lint knip intl-types intl-check migrate migration empty-migration seed test coverage
+.PHONY: env up down build restart lint knip intl-types intl-check migrate migration empty-migration seed test utest itest coverage
 
 SERVICE_EXEC_WITH_SECRETS := docker-compose exec service sh /usr/local/bin/with-vault-secrets.sh
 
@@ -35,6 +35,10 @@ seed:
 
 # Test
 test:
-	NODE_OPTIONS=--experimental-vm-modules npx jest --config ./jest.unit.config.mjs
+	pnpm run utest
+utest:
+	pnpm run utest
+itest:
+	pnpm run itest
 coverage:
 	NODE_OPTIONS=--experimental-vm-modules npx jest --config ./jest.unit.config.mjs --coverage
