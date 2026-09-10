@@ -37,6 +37,17 @@ export default [
             "import-x": importX
         },
         rules: {
+            "no-restricted-imports": [
+                "error",
+                {
+                    patterns: [
+                        {
+                            group: ["../../../**", "./../../../**"],
+                            message: "Use an alias or keep relative imports at ../../x or shallower.",
+                        },
+                    ],
+                },
+            ],
             "import-x/prefer-default-export": "off",
             "import-x/order": [
                 "error",
