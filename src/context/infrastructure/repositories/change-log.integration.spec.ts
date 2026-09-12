@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import { DeltaChanges } from "~common/transaction-manager/value-objects";
 import { PublicStringOperator } from "~infrastructure/database/enums";
 import { postgresSuite } from "~testing/integration/postgres.suite";
-import { CoreFixture } from "~testing/fixtures/core.fixture";
+import { CoreFixture } from "~testing/integration/repositories/core.fixture";
 import { EntityType } from "~context/enums";
 
 import { ChangeLogRepository } from "./change-log.repository";
