@@ -180,7 +180,7 @@ declare global {
 
             namespace Run {
                 type ResultProps<T extends ORM.AnyEntity | ORM.AnyEntity[]> = {
-                    execute(transaction: ORM.EntityManager): Promise<T> | T;
+                    execute(transaction: ORM.EntityManager): Thenable<T>;
                     audit?: SystemEntities.AuditLog.ConstructorProps;
                     outbox?: OutboxConfig<T> | OutboxConfig<T>[];
                     changeLog?: boolean;
@@ -188,7 +188,7 @@ declare global {
                 };
 
                 type VoidProps = {
-                    execute(transaction: ORM.EntityManager): Promise<void> | void;
+                    execute(transaction: ORM.EntityManager): Thenable<void>;
                     audit?: SystemEntities.AuditLog.ConstructorProps;
                     changeLog?: boolean;
                     resource?: string;
@@ -215,7 +215,9 @@ declare global {
                 type Result = Promise<void>;
             }
 
-            type OutboxPayloadMap = Record<KafkaTopic, never>;
+            type OutboxPayloadMap = {
+                [KafkaTopic.ACCESS_CACHE]: Topics.AccessCache.Message["payload"];
+            };
 
             type OutboxConfig<T> = {
                 [D in keyof OutboxPayloadMap]: {
