@@ -1,8 +1,8 @@
-import { ChangeSetType } from "@mikro-orm/postgresql";
+import { Utils, wrap, ChangeSetType } from "@mikro-orm/postgresql";
 import { Injectable, Inject } from "@nestjs/common";
 
-import { ChangeLog, AuditLog, Outbox } from "~common/transaction-manager/entities";
 import { LOG_MASKING_SERVICE, OUTBOX_SERVICE } from "~common/transaction-manager/services";
+import { ChangeLog, AuditLog, Outbox } from "~common/transaction-manager/entities";
 import { OperationContext } from "~common/transaction-manager/utilities";
 import { DeltaChanges } from "~common/transaction-manager/value-objects";
 
@@ -26,12 +26,11 @@ export class ChangeLogSubscriber implements ORM.EventSubscriber {
             if (changeSets.length) {
                 for await (const changeSet of changeSets) {
                     const delta = this.buildDelta(changeSet);
-                    const primaryKey = changeSet.getPrimaryKey();
-                    if (!Array.isArray(primaryKey) && Object.keys(delta).length) {
+                    if (Object.keys(delta).length) {
                         const maskedDelta = await this.logMaskingService.maskChangeLog({ delta });
 
                         const entity = new ChangeLog({
-                            entity: String(primaryKey),
+                            entity: this.stringifyPrimaryKey(changeSet.getPrimaryKey()),
                             entityType: changeSet.meta.className,
                             auditEntry: context.auditEntry,
                             changeType: changeSet.type,
@@ -53,29 +52,39 @@ export class ChangeLogSubscriber implements ORM.EventSubscriber {
         }
     }
 
+    private stringifyPrimaryKey(primaryKey: unknown): string {
+        if (Array.isArray(primaryKey)) {
+            return primaryKey.map(String).join(":");
+        } else if (Utils.isPlainObject(primaryKey)) {
+            return Object.values(primaryKey).map(String).join(":");
+        } else {
+            return String(primaryKey);
+        }
+    }
+
     private buildDelta(changeSet: TransactionManager.ChangeLogSubscriber.BuildDelta): ValueObjects.DeltaChanges {
         const delta: ValueObjects.DeltaChanges.ConstructorProps = {};
 
         switch (changeSet.type) {
             case ChangeSetType.CREATE: {
                 for (const [field, newValue] of Object.entries(changeSet.payload)) {
-                    delta[field] = { old: null, new: newValue };
+                    delta[field] = this.buildDeltaChange(null, newValue);
                 }
                 break;
             }
             case ChangeSetType.UPDATE: {
                 for (const [field, newValue] of Object.entries(changeSet.payload)) {
-                    delta[field] = {
-                        old: changeSet.originalEntity?.[field] ?? null,
-                        new: newValue,
-                    };
+                    delta[field] = this.buildDeltaChange(changeSet.originalEntity?.[field] ?? null, newValue);
                 }
                 break;
             }
             case ChangeSetType.DELETE: {
-                if (changeSet.originalEntity) {
-                    for (const [field, oldValue] of Object.entries(changeSet.originalEntity)) {
-                        delta[field] = { old: oldValue, new: null };
+                const deletedEntity = changeSet.originalEntity ?? changeSet.entity;
+                if (deletedEntity) {
+                    for (const [field, oldValue] of Object.entries(deletedEntity)) {
+                        if (!(Utils.isCollection(oldValue) && !oldValue.isInitialized())) {
+                            delta[field] = this.buildDeltaChange(oldValue, null);
+                        }
                     }
                 }
                 break;
@@ -83,5 +92,30 @@ export class ChangeLogSubscriber implements ORM.EventSubscriber {
         }
 
         return new DeltaChanges(delta);
+    }
+
+    private buildDeltaChange(oldValue: unknown, newValue: unknown): ValueObjects.DeltaChanges.ConstructorProps[string] {
+        return {
+            old: this.normalizeDeltaValue(oldValue),
+            new: this.normalizeDeltaValue(newValue),
+        };
+    }
+
+    private normalizeDeltaValue(value: unknown): unknown {
+        if (value instanceof Date) {
+            return value;
+        } else if (Array.isArray(value)) {
+            return value.map((item) => this.normalizeDeltaValue(item));
+        } else if (Utils.isCollection(value)) {
+            return value.isInitialized() ? value.getIdentifiers() : [];
+        } else if (Utils.isEntity(value, true)) {
+            return wrap(value, true).getPrimaryKey();
+        } else if (Utils.isPlainObject(value)) {
+            return Object.fromEntries(
+                Object.entries(value).map(([field, fieldValue]) => [field, this.normalizeDeltaValue(fieldValue)]),
+            );
+        } else {
+            return value;
+        }
     }
 }

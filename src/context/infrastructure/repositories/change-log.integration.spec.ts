@@ -39,6 +39,15 @@ describe("ChangeLogRepository", () => {
         });
     });
 
+    it("persists a joined composite entity id in the text column", async () => {
+        const entity = `${randomUUID()}:${randomUUID()}:1`;
+        const changeLog = await suite.fixtures().createChangeLog({ entity });
+
+        await expect(suite.repository().findUniqueOrThrow({ where: { id: changeLog.id } })).resolves.toMatchObject({
+            entity,
+        });
+    });
+
     it("finds change log entries by change type and entity mapper filters", async () => {
         const matched = await suite.fixtures().createChangeLog({
             changeType: ChangeSetType.CREATE,

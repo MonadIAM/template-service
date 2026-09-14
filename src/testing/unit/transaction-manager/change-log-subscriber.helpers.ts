@@ -74,10 +74,11 @@ export class ChangeLogSubscriberUnitHelpers
     ): Unit.TransactionManager.Subscriber.ChangeSetFactory.Result {
         return this.contract<Unit.TransactionManager.Subscriber.ChangeSetFactory.Result>({
             getPrimaryKey: jest.fn(() => props.primaryKey ?? "00000000-0000-4000-8000-000000000001"),
-            payload: props.payload ?? { name: "New Name" },
             meta: { className: props.className ?? "Example" },
+            payload: props.payload ?? { name: "New Name" },
             type: props.type ?? ChangeSetType.UPDATE,
             originalEntity: props.originalEntity,
+            entity: props.entity,
         });
     }
 
