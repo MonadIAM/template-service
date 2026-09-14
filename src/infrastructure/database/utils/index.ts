@@ -1,4 +1,4 @@
 export { QueryBuilderAdapter } from "./query-builder-adapter";
 export { ORMAdapter } from "./orm-adapter";
-export { knex } from "./knex-builder";
+export { kysely } from "./kysely-builder";
 export * from "./mappers";

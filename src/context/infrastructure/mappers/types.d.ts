@@ -11,13 +11,6 @@ declare global {
             };
 
             interface Contract<E, A extends Meta> {
-                buildOptionsKnex?(
-                    query: ORM.QueryBuilder,
-                    sort: A["Sort"],
-                    pagination: Pagination,
-                    tableAlias: string,
-                ): void;
-                buildWhereKnex?(query: ORM.QueryBuilder, filters: A["Filters"], tableAlias: string): void;
                 buildWhereORM(filters: A["Filters"], basic?: ORM.ObjectQuery<E>): ORM.FilterQuery<E>;
                 buildOptionsORM<P extends string, F extends string>(
                     sort: A["Sort"],
