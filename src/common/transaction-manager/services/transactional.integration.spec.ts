@@ -7,7 +7,7 @@ import { CoreFixture } from "~testing/integration/repositories/core.fixture";
 import { ActionType, EntityType, KafkaTopic } from "~context/enums";
 import { postgresSuite } from "~testing/integration/postgres.suite";
 
-import { AuditLog, ChangeLog, Outbox } from "../entities";
+import { AuditLog, ChangeLog, Inbox, Outbox } from "../entities";
 
 describe("TransactionalService integration", () => {
     const helper = new TransactionalHelper();
@@ -23,6 +23,76 @@ describe("TransactionalService integration", () => {
         actor: randomUUID(),
         realm: randomUUID(),
     };
+
+    const INCOMING_MESSAGE = {
+        source: { topic: "source-topic", partition: 0, offset: "42" },
+        event: "00000000-0000-4000-8000-000000000001",
+        consumerKey: "template.placeholder.v1",
+    };
+
+    it("commits inbox and effects exactly once", async () => {
+        const executeDuplicate = jest.fn(() => Promise.reject(new Error("duplicate callback must not execute")));
+
+        const first = await suite.repository().service.consume({
+            incoming: INCOMING_MESSAGE,
+            audit: AUDIT_PROPS,
+            execute: () => Promise.resolve(),
+        });
+        const duplicate = await suite.repository().service.consume({
+            incoming: INCOMING_MESSAGE,
+            audit: AUDIT_PROPS,
+            execute: executeDuplicate,
+        });
+
+        const readManager = suite.repository().readManager;
+        readManager.clear();
+
+        expect(first).toEqual({ status: "processed", value: undefined });
+        expect(duplicate).toEqual({ status: "duplicate" });
+        expect(executeDuplicate).not.toHaveBeenCalled();
+        await expect(readManager.count(Inbox, {})).resolves.toBe(1);
+        await expect(readManager.count(AuditLog, {})).resolves.toBe(1);
+        await expect(readManager.count(Outbox, { destinationTopic: KafkaTopic.AUDIT_LOG_ARCHIVE })).resolves.toBe(1);
+    });
+
+    it("rolls back a failed claim and allows redelivery", async () => {
+        const incoming = { ...INCOMING_MESSAGE, event: "00000000-0000-4000-8000-000000000002" };
+        const failure = new Error("domain failed");
+
+        await expect(
+            suite.repository().service.consume({
+                incoming,
+                execute: () => Promise.reject(failure),
+            }),
+        ).rejects.toBe(failure);
+
+        const readManager = suite.repository().readManager;
+        readManager.clear();
+        await expect(readManager.count(Inbox, {})).resolves.toBe(0);
+
+        await expect(suite.repository().service.consume({ incoming, execute: () => Promise.resolve() })).resolves.toEqual({
+            status: "processed",
+            value: undefined,
+        });
+
+        readManager.clear();
+        await expect(readManager.count(Inbox, {})).resolves.toBe(1);
+    });
+
+    it("allows only one concurrent transaction to process an event", async () => {
+        const incoming = { ...INCOMING_MESSAGE, event: "00000000-0000-4000-8000-000000000003" };
+        const execute = jest.fn(() => Promise.resolve());
+        const consume = (): TransactionManager.Service.Consume.Result<void> =>
+            suite.repository().service.consume({ incoming, execute });
+
+        const outcomes = await Promise.all([consume(), consume()]);
+        const readManager = suite.repository().readManager;
+        readManager.clear();
+
+        expect(outcomes.map(({ status }) => status).sort()).toEqual(["duplicate", "processed"]);
+        expect(execute).toHaveBeenCalledTimes(1);
+        await expect(readManager.count(Inbox, {})).resolves.toBe(1);
+    });
 
     it("commits audit log and archive outbox in one trace", async () => {
         await suite.repository().service.run({

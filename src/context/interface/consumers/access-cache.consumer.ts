@@ -1,16 +1,24 @@
-import { EventPattern, Payload, ClientKafka } from "@nestjs/microservices";
+import { EventPattern, Payload, ClientKafka, Ctx, KafkaContext } from "@nestjs/microservices";
 import { Controller, Inject, Logger, OnModuleInit } from "@nestjs/common";
 import { InvalidationScope, KafkaTopic } from "@monadiam/shared";
 import { lastValueFrom } from "rxjs";
 
-import { KafkaTopicBuilder, KAFKA_RETRY_REGISTRY, KAFKA_SCHEMA_REGISTRY, KAFKA_SERVICE } from "~infrastructure/kafka";
 import { KafkaMetricsRecorder } from "~observability/metrics/kafka.recorder";
 import { ACCESS_CACHE_SERVICE } from "~context/infrastructure/services";
 import { Exception } from "~common/exceptions";
+import {
+    KAFKA_SCHEMA_REGISTRY,
+    KAFKA_RETRY_REGISTRY,
+    KafkaIncomingMapper,
+    KafkaTopicBuilder,
+    KAFKA_SERVICE,
+} from "~infrastructure/kafka";
 
 @Controller()
 export class AccessCacheConsumer implements Consumers.AccessCache.Contract, OnModuleInit {
+    private readonly incomingMapper = new KafkaIncomingMapper();
     private readonly logger = new Logger(AccessCacheConsumer.name);
+    private readonly consumerKey = "template.access-cache.v1";
 
     public constructor(
         @Inject(ACCESS_CACHE_SERVICE)
@@ -29,17 +37,22 @@ export class AccessCacheConsumer implements Consumers.AccessCache.Contract, OnMo
         await this.kafkaClient.connect();
 
         this.retryRegistry.register({
+            consumerKey: this.consumerKey,
             topic: KafkaTopic.ACCESS_CACHE,
             handler: this,
         });
     }
 
     @EventPattern(KafkaTopic.ACCESS_CACHE)
-    public async handle(@Payload() message: Consumers.AccessCache.Message): Consumers.AccessCache.Handle.Result {
+    public async handle(
+        @Payload() message: Consumers.AccessCache.Message,
+        @Ctx() context: KafkaContext,
+    ): Consumers.AccessCache.Handle.Result {
+        const incoming = this.incomingMapper.map({ consumerKey: this.consumerKey, context });
         try {
-            await this.process({ message });
+            await this.process({ incoming, message });
         } catch (error) {
-            await this.reject({ message, error });
+            await this.reject({ incoming, message, error });
         }
     }
 
@@ -65,7 +78,7 @@ export class AccessCacheConsumer implements Consumers.AccessCache.Contract, OnMo
     }
 
     public async reject(props: Consumers.AccessCache.Reject.Props): Consumers.AccessCache.Reject.Result {
-        const { message, error } = props;
+        const { incoming, message, error } = props;
         const retryable = Exception.isRetryable(error);
 
         if (!retryable) {
@@ -76,6 +89,7 @@ export class AccessCacheConsumer implements Consumers.AccessCache.Contract, OnMo
             this.kafkaClient.emit(
                 retryable ? KafkaTopicBuilder.retry(KafkaTopic.ACCESS_CACHE) : KafkaTopic.ACCESS_CACHE_DEAD,
                 {
+                    key: incoming.event,
                     value: {
                         originalTopic: KafkaTopic.ACCESS_CACHE,
                         error: String(error),

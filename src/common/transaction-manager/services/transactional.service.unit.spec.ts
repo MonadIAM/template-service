@@ -271,6 +271,69 @@ describe("TransactionalService", () => {
         });
     });
 
+    describe("consume", () => {
+        const incoming: TransactionManager.Service.IncomingMessage = {
+            consumerKey: "template.placeholder.v1",
+            event: "00000000-0000-4000-8000-000000000001",
+            source: { topic: "source-topic", partition: 0, offset: "42" },
+        };
+
+        it("claims the message before audit and domain effects", async () => {
+            const callOrder: string[] = [];
+            const claim = jest.fn<TransactionManager.Inbox.Claim.Signature>(() => {
+                callOrder.push("claim");
+                return Promise.resolve(true);
+            });
+            const inbox = helpers.inboxContract({ claim });
+            const logMasking = helpers.logMaskingContract({
+                sign: () => {
+                    callOrder.push("sign");
+                    return Promise.resolve({ keyVersion: 1, signature: "signature" });
+                },
+            });
+            const { service, transactional } = helpers.service({ inbox, logMasking });
+            const execute = jest.fn<TransactionManager.Service.Run.Props<void>["execute"]>(() => {
+                callOrder.push("execute");
+            });
+
+            await expect(service.consume({ incoming, audit: AUDIT_PROPS, execute })).resolves.toEqual({
+                status: "processed",
+                value: undefined,
+            });
+
+            expect(callOrder).toEqual(["claim", "sign", "execute"]);
+            expect(claim).toHaveBeenCalledWith({ transaction: transactional.transaction, incoming });
+            expect(transactional.flush).toHaveBeenCalledTimes(1);
+        });
+
+        it("returns duplicate without audit or domain effects", async () => {
+            const execute = jest.fn<TransactionManager.Service.Run.Props<void>["execute"]>();
+            const inbox = helpers.inboxContract({ claim: () => Promise.resolve(false) });
+            const { service, transactional, logMasking } = helpers.service({ inbox });
+
+            await expect(service.consume({ incoming, audit: AUDIT_PROPS, execute })).resolves.toEqual({
+                status: "duplicate",
+            });
+
+            expect(execute).not.toHaveBeenCalled();
+            expect(logMasking.sign).not.toHaveBeenCalled();
+            expect(transactional.persist).not.toHaveBeenCalled();
+            expect(transactional.flush).not.toHaveBeenCalled();
+        });
+
+        it("maps inbox database errors using the operation resource", async () => {
+            const error = new DriverException(new Error("claim failed"));
+            const execute = jest.fn<TransactionManager.Service.Run.Props<void>["execute"]>();
+            const inbox = helpers.inboxContract({ claim: () => Promise.reject(error) });
+            const { service } = helpers.service({ inbox });
+
+            await expect(service.consume({ incoming, execute, resource: "Example" })).rejects.toThrow(
+                "db.INTERNAL_DRIVER_ERROR",
+            );
+            expect(execute).not.toHaveBeenCalled();
+        });
+    });
+
     describe("executeWithEffects", () => {
         it("returns the execute result and flushes after persisting outbox", async () => {
             const { service, transactional } = helpers.service();

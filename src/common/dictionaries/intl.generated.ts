@@ -38,6 +38,12 @@ export type I18nTranslations = {
         };
     };
     "services": {
+        "kafka-retry": {
+            "HANDLER_NOT_REGISTERED": string;
+        };
+        "kafka-incoming": {
+            "EVENT_MISSING": string;
+        };
         "jwt": {
             "INVALID_ACCESS_TOKEN": string;
         };

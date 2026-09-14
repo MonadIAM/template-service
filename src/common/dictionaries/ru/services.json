@@ -1,4 +1,10 @@
 {
+  "kafka-retry": {
+    "HANDLER_NOT_REGISTERED": "Для топика {topic} не зарегистрирован обработчик повторов."
+  },
+  "kafka-incoming": {
+    "EVENT_MISSING": "Отсутствует Kafka key, необходимый для идемпотентной обработки сообщения."
+  },
   "jwt": {
     "INVALID_ACCESS_TOKEN": "Access-токен недействителен или просрочен."
   },

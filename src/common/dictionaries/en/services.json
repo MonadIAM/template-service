@@ -1,4 +1,10 @@
 {
+  "kafka-retry": {
+    "HANDLER_NOT_REGISTERED": "No retry handler is registered for topic {topic}."
+  },
+  "kafka-incoming": {
+    "EVENT_MISSING": "The Kafka message key required for idempotent processing is missing."
+  },
   "jwt": {
     "INVALID_ACCESS_TOKEN": "The access token is invalid or expired."
   },

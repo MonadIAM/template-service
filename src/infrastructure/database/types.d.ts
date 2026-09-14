@@ -125,6 +125,7 @@ declare global {
         };
 
         type Database = {
+            "system.inbox": Columns<SystemEntities.Inbox>;
             "system.audit_log": AuditLogColumns;
             "system.change_log": ChangeLogColumns;
             "system.outbox": OutboxColumns;

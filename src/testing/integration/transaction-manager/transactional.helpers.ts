@@ -1,7 +1,8 @@
 import { expect } from "@jest/globals";
 
 import { TransactionalService } from "~common/transaction-manager/services/transactional.service";
-import { AuditLog, ChangeLog, Outbox } from "~common/transaction-manager/entities";
+import { AuditLog, ChangeLog, Inbox, Outbox } from "~common/transaction-manager/entities";
+import { InboxService } from "~common/transaction-manager/services/inbox.service";
 import { ChangeLogSubscriber } from "~common/transaction-manager/subscribers";
 import { OperationContext } from "~common/transaction-manager/utilities";
 import { KafkaTopic } from "~context/enums";
@@ -62,7 +63,13 @@ export class TransactionalHelper implements Integration.TransactionalHelper.Cont
             .registerSubscriber(new ChangeLogSubscriber(logMaskingService, outboxService, operationContext));
 
         return {
-            service: new TransactionalService(writeManager, logMaskingService, outboxService, operationContext),
+            service: new TransactionalService(
+                writeManager,
+                new InboxService(),
+                logMaskingService,
+                outboxService,
+                operationContext,
+            ),
             operationContext,
             readManager,
             orm: props.orm,
@@ -76,5 +83,6 @@ export class TransactionalHelper implements Integration.TransactionalHelper.Cont
         await expect(readManager.count(AuditLog, {})).resolves.toBe(0);
         await expect(readManager.count(ChangeLog, {})).resolves.toBe(0);
         await expect(readManager.count(Outbox, {})).resolves.toBe(0);
+        await expect(readManager.count(Inbox, {})).resolves.toBe(0);
     }
 }

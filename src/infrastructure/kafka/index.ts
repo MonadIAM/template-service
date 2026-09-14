@@ -1,3 +1,4 @@
+export { KafkaIncomingMapper } from "./incoming.mapper";
 export { KafkaTopicBuilder } from "./topic.builder";
 export { KafkaModule } from "./kafka.module";
 export { KafkaUtils } from "./utils";
