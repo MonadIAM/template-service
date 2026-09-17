@@ -2,8 +2,8 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Processor, WorkerHost } from "@nestjs/bullmq";
 import { Job } from "bullmq";
 
-import { AUDIT_LOG_SERVICE, CHANGE_LOG_SERVICE } from "~context/application/services";
 import { INBOX_SERVICE, TRANSACTIONAL_SERVICE } from "~common/transaction-manager";
+import { AUDIT_LOG_SERVICE, CHANGE_LOG_SERVICE } from "~context/domain/services";
 import { CleanupJob } from "~context/enums";
 
 import { CLEANUP_QUEUE } from "../tokens";

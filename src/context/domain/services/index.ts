@@ -1,7 +1,6 @@
 import { ClassProvider } from "@nestjs/common";
 
-import { CHANGE_LOG_SERVICE, AUDIT_LOG_SERVICE } from "~context/application/services";
-
+import { CHANGE_LOG_SERVICE, AUDIT_LOG_SERVICE } from "./tokens";
 import { ChangeLogService } from "./change-log.service";
 import { AuditLogService } from "./audit-log.service";
 
@@ -15,3 +14,5 @@ export const DOMAIN_SERVICES: ClassProvider[] = [
         useClass: AuditLogService,
     },
 ];
+
+export { CHANGE_LOG_SERVICE, AUDIT_LOG_SERVICE };
