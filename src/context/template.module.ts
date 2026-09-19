@@ -18,10 +18,7 @@ import { COMMANDS } from "./application/commands";
 import { QUERIES } from "./application/queries";
 
 @Module({
-    imports: [
-        TransactionManagerModule,
-        BullModule.registerQueue({ name: BullQueue.KAFKA_RETRY }, { name: BullQueue.CLEANUP }),
-    ],
+    imports: [TransactionManagerModule, BullModule.registerQueue({ name: BullQueue.CLEANUP })],
     providers: [
         ...INFRASTRUCTURE_SERVICES,
         ...DOMAIN_SERVICES,
