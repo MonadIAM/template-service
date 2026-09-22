@@ -1,15 +1,17 @@
 import { ChangeSetType } from "@mikro-orm/core";
 import { randomUUID } from "node:crypto";
 
-import { AuditLog, ChangeLog } from "~common/transaction-manager/entities";
+import { EntityFactoryRegistry } from "~testing/entity-factory.registry";
 import { DeltaChanges } from "~common/transaction-manager/value-objects";
 import { ActionType, EntityType } from "~context/enums";
 
 export class CoreFixture implements Fixtures.Core.Contract {
+    private readonly entities = new EntityFactoryRegistry();
+
     public constructor(private readonly entityManager: ORM.EntityManager) {}
 
     public async createAuditLog(props: Fixtures.Core.CreateAuditLog.Props = {}): Fixtures.Core.CreateAuditLog.Result {
-        const auditLog = new AuditLog({
+        const auditLog = this.entities.createAuditLog({
             entityType: props.entityType ?? EntityType.EXAMPLE,
             actionType: props.actionType ?? ActionType.CREATE,
             actor: props.actor ?? randomUUID(),
@@ -29,7 +31,7 @@ export class CoreFixture implements Fixtures.Core.Contract {
 
     public async createChangeLog(props: Fixtures.Core.CreateChangeLog.Props = {}): Fixtures.Core.CreateChangeLog.Result {
         const auditEntry = props.auditEntry ?? (await this.createAuditLog());
-        const changeLog = new ChangeLog({
+        const changeLog = this.entities.createChangeLog({
             delta: props.delta ?? new DeltaChanges({ name: { old: null, new: "Updated Name" } }),
             changeType: props.changeType ?? ChangeSetType.CREATE,
             entityType: props.entityType ?? EntityType.EXAMPLE,

@@ -38,33 +38,31 @@ describe("LogMaskingService", () => {
     });
 
     describe("normalize", () => {
-        it("normalizes camelCase, snake_case and mixed case names", () => {
+        it.each([
+            ["already_snake_case", "_already_snake_case_"],
+            ["recoveryCode", "_recovery_code_"],
+            ["TokenTtl", "_token_ttl_"],
+            ["email", "_email_"],
+        ])("normalizes %s to %s", (input, expected) => {
             const { service } = helpers.service();
 
-            expect(service.normalize("already_snake_case")).toBe("_already_snake_case_");
-            expect(service.normalize("recoveryCode")).toBe("_recovery_code_");
-            expect(service.normalize("TokenTtl")).toBe("_token_ttl_");
-            expect(service.normalize("email")).toBe("_email_");
+            const result = service.normalize(input);
+
+            expect(result).toBe(expected);
         });
     });
 
     describe("mask", () => {
-        it("masks phone numbers while preserving country code and last two digits", () => {
+        it.each([
+            { kind: "phone", input: "+79991234567", expected: "+7********67" },
+            { kind: "email", input: "user@example.com", expected: "us********@example.com" },
+            { kind: "ordinary string", input: "opaque-secret", expected: "****************" },
+        ])("masks $kind", ({ input, expected }) => {
             const { service } = helpers.service();
 
-            expect(service.mask("+79991234567")).toBe("+7********67");
-        });
+            const result = service.mask(input);
 
-        it("masks emails while preserving the domain", () => {
-            const { service } = helpers.service();
-
-            expect(service.mask("user@example.com")).toBe("us********@example.com");
-        });
-
-        it("masks ordinary strings with a fixed replacement", () => {
-            const { service } = helpers.service();
-
-            expect(service.mask("opaque-secret")).toBe("****************");
+            expect(result).toBe(expected);
         });
 
         it("does not return one-character local-part emails in clear text", () => {

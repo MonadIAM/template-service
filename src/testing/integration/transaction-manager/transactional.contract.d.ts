@@ -1,55 +1,53 @@
 import type { OperationContext } from "~common/transaction-manager/utilities";
 
 declare global {
-    namespace Integration {
-        namespace TransactionalHelper {
-            interface Contract {
-                createTransactionalServiceContext: CreateTransactionalServiceContext.Signature;
-                createLogMaskingService: CreateLogMaskingService.Signature;
-                expectNoTransactionRows: ExpectNoTransactionRows.Signature;
-                createOutboxService: CreateOutboxService.Signature;
+    namespace Integration.TransactionalHelper {
+        interface Contract {
+            createTransactionalServiceContext: CreateTransactionalServiceContext.Signature;
+            createLogMaskingService: CreateLogMaskingService.Signature;
+            expectNoTransactionRows: ExpectNoTransactionRows.Signature;
+            createOutboxService: CreateOutboxService.Signature;
+        }
+
+        namespace CreateLogMaskingService {
+            type Props = Partial<globalThis.TransactionManager.LogMasking.PublicContract>;
+
+            type Result = globalThis.TransactionManager.LogMasking.Contract;
+
+            type Signature = (overrides?: Props) => Result;
+        }
+
+        namespace CreateOutboxService {
+            type Props = Partial<globalThis.TransactionManager.Outbox.Contract>;
+
+            type Result = globalThis.TransactionManager.Outbox.Contract;
+
+            type Signature = (overrides?: Props) => Result;
+        }
+
+        namespace CreateTransactionalServiceContext {
+            interface Props {
+                logMaskingService?: globalThis.TransactionManager.LogMasking.Contract;
+                outboxService?: globalThis.TransactionManager.Outbox.Contract;
+                orm: Postgres.Suite.FactoryContext["orm"];
             }
 
-            namespace CreateLogMaskingService {
-                type Props = Partial<globalThis.TransactionManager.LogMasking.PublicContract>;
+            type Result = {
+                service: globalThis.TransactionManager.Service.PublicContract;
+                orm: Postgres.Suite.FactoryContext["orm"];
+                operationContext: OperationContext;
+                readManager: ORM.EntityManager;
+            };
 
-                type Result = globalThis.TransactionManager.LogMasking.Contract;
+            type Signature = (props: Props) => Result;
+        }
 
-                type Signature = (overrides?: Props) => Result;
-            }
+        namespace ExpectNoTransactionRows {
+            type Props = ORM.EntityManager;
 
-            namespace CreateOutboxService {
-                type Props = Partial<globalThis.TransactionManager.Outbox.Contract>;
+            type Result = Promise<void>;
 
-                type Result = globalThis.TransactionManager.Outbox.Contract;
-
-                type Signature = (overrides?: Props) => Result;
-            }
-
-            namespace CreateTransactionalServiceContext {
-                interface Props {
-                    readonly logMaskingService?: globalThis.TransactionManager.LogMasking.Contract;
-                    readonly outboxService?: globalThis.TransactionManager.Outbox.Contract;
-                    readonly orm: Postgres.Suite.FactoryContext["orm"];
-                }
-
-                type Result = {
-                    readonly service: globalThis.TransactionManager.Service.PublicContract;
-                    readonly orm: Postgres.Suite.FactoryContext["orm"];
-                    readonly operationContext: OperationContext;
-                    readonly readManager: ORM.EntityManager;
-                };
-
-                type Signature = (props: Props) => Result;
-            }
-
-            namespace ExpectNoTransactionRows {
-                type Props = ORM.EntityManager;
-
-                type Result = Promise<void>;
-
-                type Signature = (readManager: Props) => Result;
-            }
+            type Signature = (readManager: Props) => Result;
         }
     }
 }

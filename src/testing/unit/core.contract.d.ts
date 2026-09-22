@@ -1,69 +1,44 @@
 import { ConfigService } from "@nestjs/config";
-import { jest } from "@jest/globals";
 
 declare global {
-    namespace Unit {
-        namespace Domain {
-            type Mock = ReturnType<typeof jest.fn>;
+    namespace Unit.Domain.Core {
+        interface Transaction {
+            entityManager: ORM.EntityManager;
+            persist: Jest.Mock<(entity: object) => void>;
+            remove: Jest.Mock;
+            flush: Jest.Mock<() => Promise<void>>;
+            clear: Jest.Mock;
+            merge: Jest.Mock;
+        }
 
-            namespace Core {
-                interface Transaction {
-                    readonly entityManager: ORM.EntityManager;
-                    readonly persist: Mock;
-                    readonly remove: Mock;
-                    readonly flush: Mock;
-                    readonly clear: Mock;
-                    readonly merge: Mock;
-                }
+        interface Contract extends Testing.EntityFactory.Contract {
+            transaction: TransactionFactory.Signature;
+            createExample: CreateExample.Signature;
+            config: Config.Signature;
+        }
 
-                interface Contract {
-                    readonly createChangeLog: CreateChangeLog.Signature;
-                    readonly transaction: TransactionFactory.Signature;
-                    readonly createAuditLog: CreateAuditLog.Signature;
-                    readonly createExample: CreateExample.Signature;
-                    readonly config: Config.Signature;
-                }
+        namespace TransactionFactory {
+            type Result = Transaction;
 
-                namespace TransactionFactory {
-                    type Result = Transaction;
+            type Signature = () => Result;
+        }
 
-                    type Signature = () => Result;
-                }
+        namespace Config {
+            type Props = {
+                values?: Record<string, unknown>;
+            };
 
-                namespace Config {
-                    type Props = {
-                        readonly values?: Record<string, unknown>;
-                    };
+            type Result = ConfigService;
 
-                    type Result = ConfigService;
+            type Signature = (props?: Props) => Result;
+        }
 
-                    type Signature = (props?: Props) => Result;
-                }
+        namespace CreateExample {
+            type Props = Partial<ORM.AnyEntity>;
 
-                namespace CreateExample {
-                    type Props = Partial<ORM.AnyEntity>;
+            type Result = ORM.AnyEntity;
 
-                    type Result = ORM.AnyEntity;
-
-                    type Signature = (props?: Props) => Result;
-                }
-
-                namespace CreateAuditLog {
-                    type Props = Partial<SystemEntities.AuditLog>;
-
-                    type Result = SystemEntities.AuditLog;
-
-                    type Signature = (props?: Props) => Result;
-                }
-
-                namespace CreateChangeLog {
-                    type Props = Partial<SystemEntities.ChangeLog>;
-
-                    type Result = SystemEntities.ChangeLog;
-
-                    type Signature = (props?: Props) => Result;
-                }
-            }
+            type Signature = (props?: Props) => Result;
         }
     }
 }

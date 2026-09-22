@@ -1,13 +1,12 @@
-import { ChangeSetType } from "@mikro-orm/postgresql";
 import { ConfigService } from "@nestjs/config";
 import { jest } from "@jest/globals";
 
-import { AuditLog, ChangeLog } from "~common/transaction-manager/entities";
+import { EntityFactoryRegistry } from "~testing/entity-factory.registry";
 
-export class DomainServiceCoreUnitHelpers implements Unit.Domain.Core.Contract {
+export class DomainServiceCoreUnitHelpers extends EntityFactoryRegistry implements Unit.Domain.Core.Contract {
     public transaction(): Unit.Domain.Core.Transaction {
         const flush = jest.fn(() => Promise.resolve());
-        const persist = jest.fn();
+        const persist = jest.fn<(entity: object) => void>();
         const remove = jest.fn();
         const clear = jest.fn();
         const merge = jest.fn();
@@ -33,32 +32,6 @@ export class DomainServiceCoreUnitHelpers implements Unit.Domain.Core.Contract {
             id: "00000000-0000-4000-8000-0000000000ff",
             ...props,
         });
-    }
-
-    public createAuditLog(props: Unit.Domain.Core.CreateAuditLog.Props = {}): SystemEntities.AuditLog {
-        const entity = new AuditLog({
-            context: { userAgent: "unit-agent", ip: "127.0.0.1" },
-            actionType: "CREATE",
-            entityType: "EXAMPLE",
-        });
-
-        Object.assign(entity, props);
-
-        return entity;
-    }
-
-    public createChangeLog(props: Unit.Domain.Core.CreateChangeLog.Props = {}): SystemEntities.ChangeLog {
-        const entity = new ChangeLog({
-            auditEntry: "00000000-0000-4000-8000-0000000000fe",
-            entity: "00000000-0000-4000-8000-0000000000fd",
-            changeType: ChangeSetType.CREATE,
-            entityType: "EXAMPLE",
-            delta: {},
-        });
-
-        Object.assign(entity, props);
-
-        return entity;
     }
 
     protected contract<T>(value: object): T {
