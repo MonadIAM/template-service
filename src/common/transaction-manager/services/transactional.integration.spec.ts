@@ -3,9 +3,9 @@ import { describe, expect, it, jest } from "@jest/globals";
 import { randomUUID } from "node:crypto";
 
 import { TransactionalHelper } from "~testing/integration/transaction-manager/transactional.helpers";
+import { postgresSuite } from "~testing/integration/containers/postgres.suite";
 import { CoreFixture } from "~testing/integration/repositories/core.fixture";
 import { ActionType, EntityType, KafkaTopic } from "~context/enums";
-import { postgresSuite } from "~testing/integration/postgres.suite";
 
 import { AuditLog, ChangeLog, Inbox, Outbox } from "../entities";
 

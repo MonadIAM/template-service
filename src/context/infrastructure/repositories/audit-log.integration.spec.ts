@@ -2,9 +2,9 @@ import { describe, expect, it } from "@jest/globals";
 import { QueryOrder } from "@mikro-orm/postgresql";
 import { randomUUID } from "node:crypto";
 
-import { PublicStringOperator } from "~infrastructure/database/enums";
-import { postgresSuite } from "~testing/integration/postgres.suite";
+import { postgresSuite } from "~testing/integration/containers/postgres.suite";
 import { CoreFixture } from "~testing/integration/repositories/core.fixture";
+import { PublicStringOperator } from "~infrastructure/database/enums";
 import { ActionType, EntityType } from "~context/enums";
 
 import { AuditLogRepository } from "./audit-log.repository";
