@@ -54,6 +54,7 @@ const config: Options = {
 
     seeder: {
         path: "./src/infrastructure/database",
+        glob: "seeder.{js,ts}",
         defaultSeeder: "System",
     },
 
