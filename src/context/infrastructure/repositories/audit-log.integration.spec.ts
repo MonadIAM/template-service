@@ -15,59 +15,63 @@ describe("AuditLogRepository", () => {
         fixture: (entityManager) => new CoreFixture(entityManager),
     });
 
-    it("maps the persisted audit log entry through the schema", async () => {
-        const realm = randomUUID();
-        const actor = randomUUID();
-        const auditLog = await suite.fixtures().createAuditLog({
-            context: { ip: "10.20.30.40", userAgent: "mapping-agent" },
-            input: { field: "mapping-input" },
-            entityType: EntityType.EXAMPLE,
-            actionType: ActionType.UPDATE,
-            actor,
-            realm,
-        });
+    describe("findUniqueOrThrow", () => {
+        it("maps the persisted audit log entry through the schema", async () => {
+            const realm = randomUUID();
+            const actor = randomUUID();
+            const auditLog = await suite.fixtures().createAuditLog({
+                context: { ip: "10.20.30.40", userAgent: "mapping-agent" },
+                input: { field: "mapping-input" },
+                entityType: EntityType.EXAMPLE,
+                actionType: ActionType.UPDATE,
+                actor,
+                realm,
+            });
 
-        await expect(suite.repository().findUniqueOrThrow({ where: { id: auditLog.id } })).resolves.toMatchObject({
-            input: { field: "mapping-input" },
-            keyVersion: auditLog.keyVersion,
-            entityType: EntityType.EXAMPLE,
-            signature: auditLog.signature,
-            createdAt: auditLog.createdAt,
-            actionType: ActionType.UPDATE,
-            userAgent: "mapping-agent",
-            ip: "10.20.30.40",
-            id: auditLog.id,
-            actor,
-            realm,
+            await expect(suite.repository().findUniqueOrThrow({ where: { id: auditLog.id } })).resolves.toMatchObject({
+                input: { field: "mapping-input" },
+                keyVersion: auditLog.keyVersion,
+                entityType: EntityType.EXAMPLE,
+                signature: auditLog.signature,
+                createdAt: auditLog.createdAt,
+                actionType: ActionType.UPDATE,
+                userAgent: "mapping-agent",
+                ip: "10.20.30.40",
+                id: auditLog.id,
+                actor,
+                realm,
+            });
         });
     });
 
-    it("finds audit log entries by action and entity mapper filters", async () => {
-        const matched = await suite.fixtures().createAuditLog({
-            entityType: EntityType.EXAMPLE,
-            actionType: ActionType.CREATE,
-        });
-        await suite.fixtures().createAuditLog({
-            entityType: EntityType.EXAMPLE,
-            actionType: ActionType.UPDATE,
-        });
+    describe("findMany", () => {
+        it("finds audit log entries by action and entity mapper filters", async () => {
+            const matched = await suite.fixtures().createAuditLog({
+                entityType: EntityType.EXAMPLE,
+                actionType: ActionType.CREATE,
+            });
+            await suite.fixtures().createAuditLog({
+                entityType: EntityType.EXAMPLE,
+                actionType: ActionType.UPDATE,
+            });
 
-        const [entries, total] = await suite.repository().findMany({
-            pagination: { currentPage: 1, elementsPerPage: 10 },
-            sort: { createdAt: QueryOrder.ASC },
-            filters: {
-                actionType: {
-                    operator: PublicStringOperator.EQUAL,
-                    value: ActionType.CREATE,
+            const [entries, total] = await suite.repository().findMany({
+                pagination: { currentPage: 1, elementsPerPage: 10 },
+                sort: { createdAt: QueryOrder.ASC },
+                filters: {
+                    actionType: {
+                        operator: PublicStringOperator.EQUAL,
+                        value: ActionType.CREATE,
+                    },
+                    entityType: {
+                        operator: PublicStringOperator.EQUAL,
+                        value: EntityType.EXAMPLE,
+                    },
                 },
-                entityType: {
-                    operator: PublicStringOperator.EQUAL,
-                    value: EntityType.EXAMPLE,
-                },
-            },
-        });
+            });
 
-        expect(total).toBe(1);
-        expect(entries.map(({ id }) => id)).toEqual([matched.id]);
+            expect(total).toBe(1);
+            expect(entries.map(({ id }) => id)).toEqual([matched.id]);
+        });
     });
 });
