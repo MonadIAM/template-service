@@ -1,13 +1,6 @@
 # @monadiam/template-service
 
-NestJS service template for the MonadIAM platform.
-
-It includes authentication against `identity-service`, permission checks through
-`access-control-service`, audit/change logs with outbox archival, and BullMQ
-retention cleanup.
-
-Domain-specific entities, commands, queries, and controllers are intentionally
-left minimal.
+Universal NestJS service boilerplate for MonadIAM — authn/permission guards wired against identity-service and access-control-service, audit/change-log capture with outbox-based ClickHouse archival, and BullMQ retention cleanup.
 
 ----
 
