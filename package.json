@@ -3,7 +3,7 @@
   "description": "Universal NestJS service boilerplate for MonadIAM — authn/permission guards wired against identity-service and access-control-service, audit/change-log capture with outbox-based ClickHouse archival, and BullMQ retention cleanup.",
   "author": "Daniil Egorov (https://github.com/Lambdius)",
   "license": "SEE LICENSE IN LICENSE",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "main": "dist/index.js",
   "engines": {
     "node": "24.18.0"
