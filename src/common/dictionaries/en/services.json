@@ -13,5 +13,9 @@
   "vault": {
     "REQUEST_FAILED": "Vault Transit request failed.",
     "INVALID_SIGNATURE": "Vault Transit returned an invalid signature."
+  },
+  "access-cache": {
+    "UNAVAILABLE": "An up-to-date permission snapshot is unavailable.",
+    "REALM_MISMATCH": "The projection checkpoint contains a different realm."
   }
 }

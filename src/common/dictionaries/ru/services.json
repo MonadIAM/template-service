@@ -13,5 +13,9 @@
   "vault": {
     "REQUEST_FAILED": "Запрос к Vault Transit завершился ошибкой.",
     "INVALID_SIGNATURE": "Vault Transit вернул недействительную подпись."
+  },
+  "access-cache": {
+    "UNAVAILABLE": "Актуальный снимок прав недоступен.",
+    "REALM_MISMATCH": "Контрольная точка проекции содержит другую область доступа."
   }
 }
